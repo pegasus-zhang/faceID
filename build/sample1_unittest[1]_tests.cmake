@@ -1,0 +1,5 @@
+add_test([=[YoloTest.SingleBatchGpu]=]  /home/jetson/workspace/faceID/workspace/sample1_unittest [==[--gtest_filter=YoloTest.SingleBatchGpu]==] --gtest_also_run_disabled_tests)
+set_tests_properties([=[YoloTest.SingleBatchGpu]=]  PROPERTIES WORKING_DIRECTORY /home/jetson/workspace/faceID/build SKIP_REGULAR_EXPRESSION [==[\[  SKIPPED \]]==])
+add_test([=[YoloTest.MultiBatchGpu]=]  /home/jetson/workspace/faceID/workspace/sample1_unittest [==[--gtest_filter=YoloTest.MultiBatchGpu]==] --gtest_also_run_disabled_tests)
+set_tests_properties([=[YoloTest.MultiBatchGpu]=]  PROPERTIES WORKING_DIRECTORY /home/jetson/workspace/faceID/build SKIP_REGULAR_EXPRESSION [==[\[  SKIPPED \]]==])
+set(  sample1_unittest_TESTS YoloTest.SingleBatchGpu YoloTest.MultiBatchGpu)

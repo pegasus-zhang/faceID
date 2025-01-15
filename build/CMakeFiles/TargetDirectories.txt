@@ -1,0 +1,14 @@
+/home/jetson/workspace/faceID/build/CMakeFiles/yolov8.dir
+/home/jetson/workspace/faceID/build/CMakeFiles/yolov8_cuda.dir
+/home/jetson/workspace/faceID/build/CMakeFiles/yolo_test.dir
+/home/jetson/workspace/faceID/build/CMakeFiles/yolo_gpu_test.dir
+/home/jetson/workspace/faceID/build/CMakeFiles/sample1_unittest.dir
+/home/jetson/workspace/faceID/build/CMakeFiles/sample2_unittest.dir
+/home/jetson/workspace/faceID/build/CMakeFiles/uninstall.dir
+/home/jetson/workspace/faceID/build/CMakeFiles/test.dir
+/home/jetson/workspace/faceID/build/CMakeFiles/edit_cache.dir
+/home/jetson/workspace/faceID/build/CMakeFiles/rebuild_cache.dir
+/home/jetson/workspace/faceID/build/CMakeFiles/list_install_components.dir
+/home/jetson/workspace/faceID/build/CMakeFiles/install.dir
+/home/jetson/workspace/faceID/build/CMakeFiles/install/local.dir
+/home/jetson/workspace/faceID/build/CMakeFiles/install/strip.dir
