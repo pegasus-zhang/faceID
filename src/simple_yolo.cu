@@ -14,6 +14,7 @@
 #include <thread>
 #include <queue>
 #include <functional>
+#include <numeric> 
 
 #if defined(_WIN32)
 #	include <Windows.h>
@@ -1468,18 +1469,18 @@ namespace MatrixRobotVision
     void TRTInferImpl::forward(bool sync) {
 
         EngineContext* context = (EngineContext*)context_.get();
-        int inputBatchSize = inputs_[0]->size(0);
-        for(int i = 0; i < context->engine_->getNbBindings(); ++i){
-            auto dims = context->engine_->getBindingDimensions(i);
-            auto type = context->engine_->getBindingDataType(i);
-            dims.d[0] = inputBatchSize;
-            if(context->engine_->bindingIsInput(i)){
-                context->context_->setBindingDimensions(i, dims);
-            }
-        }
+        // int inputBatchSize = inputs_[0]->size(0);
+        // for(int i = 0; i < context->engine_->getNbBindings(); ++i){
+        //     auto dims = context->engine_->getBindingDimensions(i);
+        //     auto type = context->engine_->getBindingDataType(i);
+        //     dims.d[0] = inputBatchSize;
+        //     if(context->engine_->bindingIsInput(i)){
+        //         context->context_->setBindingDimensions(i, dims);
+        //     }
+        // }
 
         for (int i = 0; i < outputs_.size(); ++i) {
-            outputs_[i]->resize_single_dim(0, inputBatchSize);
+            // outputs_[i]->resize_single_dim(0, inputBatchSize);
             outputs_[i]->to_gpu(false);
         }
 
@@ -1846,6 +1847,182 @@ namespace MatrixRobotVision
         tuple<string, int>,         // start param
         AffineMatrix                // additional
     >;
+
+// 定义结构体存储检测框和关键点  
+struct Detection {  
+    float score;                     // 检测框的置信度  
+    std::vector<float> bbox;         // 检测框 [x1, y1, x2, y2]  
+    std::vector<std::vector<float>> keypoints; // 关键点 [[x1, y1], [x2, y2], ...]  
+};  
+
+// 非极大值抑制（NMS）函数  
+std::vector<int> nms(const std::vector<Detection>& detections, float iou_threshold) {  
+    std::vector<int> keep;  
+    std::vector<bool> suppressed(detections.size(), false);  
+
+    // 按置信度从高到低排序  
+    std::vector<int> indices(detections.size());  
+    std::iota(indices.begin(), indices.end(), 0);  
+    std::sort(indices.begin(), indices.end(), [&detections](int i,int j) {  
+        return detections[i].score > detections[j].score;  
+    });  
+
+    for (size_t i = 0; i < indices.size(); ++i) {  
+        int idx = indices[i];  
+        if (suppressed[idx]) continue;  
+
+        keep.push_back(idx);  
+        for (size_t j = i + 1; j < indices.size(); ++j) {  
+            int idx_j = indices[j];  
+            if (suppressed[idx_j]) continue;  
+
+            // 计算 IOU  
+            const auto& box1 = detections[idx].bbox;  
+            const auto& box2 = detections[idx_j].bbox;  
+
+            float x1 = std::max(box1[0], box2[0]);  
+            float y1 = std::max(box1[1], box2[1]);  
+            float x2 = std::min(box1[2], box2[2]);  
+            float y2 = std::min(box1[3], box2[3]);  
+
+            float inter_area = std::max(0.0f, x2 - x1) * std::max(0.0f, y2 - y1);  
+            float box1_area = (box1[2] - box1[0]) * (box1[3] - box1[1]);  
+            float box2_area = (box2[2] - box2[0]) * (box2[3] - box2[1]);  
+            float iou = inter_area / (box1_area + box2_area - inter_area);  
+
+            if (iou > iou_threshold) {  
+                suppressed[idx_j] = true;  
+            }  
+        }  
+    }  
+
+    return keep;  
+}  
+
+// 生成单个特征层的 anchor  
+std::vector<std::vector<float>> generate_anchors(int input_width, int input_height, int stride) {  
+    std::vector<std::vector<float>> anchors;  
+
+    // 计算特征图的宽度和高度  
+    int feature_width = input_width / stride;  
+    int feature_height = input_height / stride;  
+
+    // 遍历特征图的每个网格点  
+    for (int y = 0; y < feature_height; ++y) {  
+        for (int x = 0; x < feature_width; ++x) {  
+            // 计算 anchor 的中心点坐标  
+            float anchor_x = x * stride + stride / 2.0f;  
+            float anchor_y = y * stride + stride / 2.0f;  
+
+            // 保存 anchor 坐标  
+            anchors.push_back({anchor_x, anchor_y});  
+
+            float anchor_x2 = x * stride + stride / 2.0f; // 偏移量为 stride / 4  
+            float anchor_y2 = y * stride + stride / 2.0f;  
+            anchors.push_back({anchor_x2, anchor_y2});  
+        }  
+    }  
+
+    return anchors;  
+}  
+
+// 生成所有特征层的 anchor  
+std::vector<std::vector<std::vector<float>>> generate_all_anchors(  
+    int input_width, int input_height, const std::vector<int>& strides) {  
+    std::vector<std::vector<std::vector<float>>> all_anchors;  
+
+    for (int stride : strides) {  
+        // 为每个 stride 生成 anchor  
+        all_anchors.push_back(generate_anchors(input_width, input_height, stride));  
+    }  
+
+    return all_anchors;  
+}  
+
+// SCRFD 后处理函数  
+std::vector<Detection> scrfd_postprocess(  
+    const std::vector<float*>& outputs, // 模型输出（CPU 内存）  
+    const std::vector<std::vector<std::vector<float>>>& anchors, // 所有特征层的 anchor  
+    const std::vector<int>& strides,               // FPN stride  
+    int input_width, int input_height,             // 模型输入尺寸  
+    int image_width, int image_height,             // 原图尺寸  
+    float score_threshold, float iou_threshold, float* d2i) {  // 阈值  
+    std::vector<Detection> detections;  
+
+    for (size_t layer = 0; layer < strides.size(); ++layer) {  
+        const float* scores = outputs[layer * 3 + 0];  // 置信度  
+        const float* bboxes = outputs[layer * 3 + 1];  // 边界框偏移量  
+        const float* keypoints = outputs[layer * 3 + 2]; // 关键点偏移量  
+        const auto& anchor = anchors[layer];          // 当前层的 anchor  
+        int stride = strides[layer];  
+
+        float max_score = *std::max_element(scores, scores + anchor.size()); // 数组范围 [首地址, 尾地址)  
+        float min_score = *std::min_element(scores, scores + anchor.size());  
+
+        // 打印最大值和最小值  
+        std::cout << "最大值: " << max_score << std::endl;  
+        std::cout << "最小值: " << min_score << std::endl;  
+
+        for (size_t i = 0; i < anchor.size(); ++i) {  
+            float score = scores[i];  
+            if (score < score_threshold) continue;  
+
+            // 解码检测框  
+            float dx = bboxes[i * 4 + 0];  
+            float dy = bboxes[i * 4 + 1];  
+            float dw = bboxes[i * 4 + 2];  
+            float dh = bboxes[i * 4 + 3];  
+
+            float anchor_x = anchor[i][0];  
+            float anchor_y = anchor[i][1];  
+
+            float x1 = anchor_x - dx * stride;  
+            float y1 = anchor_y - dy * stride;  
+            float x2 = anchor_x + dw * stride;  
+            float y2 = anchor_y + dh * stride;  
+
+            // 解码关键点  
+            std::vector<std::vector<float>> decoded_keypoints;  
+            for (int k = 0; k < 5; ++k) {  
+                float kx = keypoints[i * 10 + k * 2 + 0];  
+                float ky = keypoints[i * 10 + k * 2 + 1];  
+                decoded_keypoints.push_back({anchor_x + kx * stride, anchor_y + ky * stride});  
+            }  
+
+            // 映射到原图尺寸  
+            // x1 = x1 / input_width * image_width;  
+            // y1 = (y1-140)*2;  
+            // x2 = x2 / input_width * image_width;  
+            // y2 = (y2-140)*2;  
+
+            float x1_img = x1*d2i[0]+y1*d2i[1]+d2i[2];  
+            float y1_img = x1*d2i[3]+y1*d2i[4]+d2i[5];  
+            float x2_img = x2*d2i[0]+y2*d2i[1]+d2i[2];
+            float y2_img = x2*d2i[3]+y2*d2i[4]+d2i[5];
+
+            for (auto& kp : decoded_keypoints) {  
+                kp[0] = kp[0] / input_width * image_width;  
+                kp[1] = kp[1] / input_height * image_height;  
+            }  
+
+            // 保存检测结果  
+            detections.push_back({score, {x1_img, y1_img, x2_img, y2_img}, decoded_keypoints});  
+        }  
+    }  
+
+    // 非极大值抑制（NMS）  
+    std::vector<int> keep = nms(detections, iou_threshold);  
+
+    // 返回最终结果  
+    std::vector<Detection> final_detections;  
+    for (int idx : keep) {  
+        final_detections.push_back(detections[idx]);  
+    }  
+
+    return final_detections;  
+}  
+
+
     class YoloTRTInferImpl : public Infer, public ThreadSafedAsyncInferImpl{
     public:
 
@@ -1882,10 +2059,10 @@ namespace MatrixRobotVision
             Tensor affin_matrix_device;
             Tensor output_array_device;
             int max_batch_size = engine->get_max_batch_size();
-            auto input         = engine->tensor("images");
-            auto output        = engine->tensor("output0");
-            int num_classes    = output->size(1) - 4;
-
+            auto input         = engine->tensor("input.1");
+            // auto output        = engine->tensor("448");
+            // int num_classes    = output->size(1) - 4;
+            
             input_width_       = input->size(3);
             input_height_      = input->size(2);
             tensor_allocator_  = make_shared<MonopolyAllocator<Tensor>>(max_batch_size * 2);
@@ -1917,33 +2094,84 @@ namespace MatrixRobotVision
                 }
                 // input->save_to_file("input.in");
                 engine->forward(false);
+
+                std::vector<float*> cpu_outputs; 
+                for(int i = 0; i < 9; i++) {
+                    cpu_outputs.emplace_back(static_cast<float*>(engine->output(i)->to_cpu(true).get_data()->cpu()));                  
+                }
                 // output->save_to_file("output.out");
-                output_array_device.to_gpu(false);
-                for(int ibatch = 0; ibatch < infer_batch_size; ++ibatch){
+                // output_array_device.to_gpu(false);
+
+            ///////////////////zzk/////////////////////
+                // // 模型输入尺寸  
+                // int input_width = 640;  
+                // int input_height = 640;  
+
+                // // 原图尺寸  
+                // // int image_width = 1280;  
+                // // int image_height = 720;  
+
+                // int image_width = 1280;  
+                // int image_height = 720;  
+
+                // FPN 的 stride  
+                std::vector<int> strides = {8, 16, 32};  
+
+                // 生成 anchor  
+                auto anchors = generate_all_anchors(input_width_, input_height_, strides);  
+
+                // 后处理参数  
+                float score_threshold = 0.4;  
+                float iou_threshold = 0.4;  
+
+                // 后处理  
+                std::vector<Detection> detections = scrfd_postprocess(  
+                    cpu_outputs, anchors, strides, input_width_, input_height_, image_width_, image_height_, score_threshold, iou_threshold, fetch_jobs[0].additional.d2i);  
+
+                
+                int count     = min(MAX_IMAGE_BBOX, (int)detections.size());
+                auto& job     = fetch_jobs[0];
+                auto& image_based_boxes   = job.output;
+                // 输出结果  
+                for (const auto& det : detections) {  
+                    std::cout << "Score: " << det.score << "\n";  
+                    std::cout << "BBox: [" << det.bbox[0] << ", " << det.bbox[1] << ", " << det.bbox[2] << ", " << det.bbox[3] << "]\n";  
+                    std::cout << "Keypoints: ";  
+                    image_based_boxes.emplace_back(det.bbox[0], det.bbox[1], det.bbox[2], det.bbox[3], det.score, 0);
+                    for (const auto& kp : det.keypoints) {  
+                        std::cout << "[" << kp[0] << ", " << kp[1] << "] ";  
+                    }  
+                    std::cout << "\n";  
+                }  
+            ///////////////////zzk/////////////////////
+
+                // for(int ibatch = 0; ibatch < infer_batch_size; ++ibatch){
                     
-                    auto& job                 = fetch_jobs[ibatch];
-                    float* image_based_output = output->gpu<float>(ibatch);
-                    float* output_array_ptr   = output_array_device.gpu<float>(ibatch);
-                    auto affine_matrix        = affin_matrix_device.gpu<float>(ibatch);
-                    checkCudaRuntime(cudaMemsetAsync(output_array_ptr, 0, sizeof(int), stream_));
-                    decode_kernel_invoker(image_based_output, output->size(2), num_classes, confidence_threshold_, nms_threshold_, affine_matrix, output_array_ptr, MAX_IMAGE_BBOX, stream_);
-                }
-                output_array_device.to_cpu();
-                for(int ibatch = 0; ibatch < infer_batch_size; ++ibatch){
-                    float* parray = output_array_device.cpu<float>(ibatch);
-                    int count     = min(MAX_IMAGE_BBOX, (int)*parray);
-                    auto& job     = fetch_jobs[ibatch];
-                    auto& image_based_boxes   = job.output;
-                    for(int i = 0; i < count; ++i){
-                        float* pbox  = parray + 1 + i * NUM_BOX_ELEMENT;
-                        int label    = pbox[5];
-                        int keepflag = pbox[6];
-                        if(keepflag == 1){
-                            image_based_boxes.emplace_back(pbox[0], pbox[1], pbox[2], pbox[3], pbox[4], label);
-                        }
-                    }
-                    job.pro->set_value(image_based_boxes);
-                }
+                //     auto& job                 = fetch_jobs[ibatch];
+                //     float* image_based_output = output->gpu<float>(ibatch);
+                //     float* output_array_ptr   = output_array_device.gpu<float>(ibatch);
+                //     auto affine_matrix        = affin_matrix_device.gpu<float>(ibatch);
+                //     checkCudaRuntime(cudaMemsetAsync(output_array_ptr, 0, sizeof(int), stream_));
+                //     decode_kernel_invoker(image_based_output, output->size(2), num_classes, confidence_threshold_, nms_threshold_, affine_matrix, output_array_ptr, MAX_IMAGE_BBOX, stream_);
+                // }
+                // output_array_device.to_cpu();
+                // for(int ibatch = 0; ibatch < infer_batch_size; ++ibatch){
+                //     // float* parray = output_array_device.cpu<float>(ibatch);
+                //     int count     = min(MAX_IMAGE_BBOX, detections.size());
+                //     auto& job     = fetch_jobs[ibatch];
+                //     auto& image_based_boxes   = job.output;
+                //     for(int i = 0; i < count; ++i){
+                //         // float* pbox  = parray + 1 + i * NUM_BOX_ELEMENT;
+                //         // int label    = pbox[5];
+                //         // int keepflag = pbox[6];
+                //         // if(keepflag == 1){
+                //         //     image_based_boxes.emplace_back(pbox[0], pbox[1], pbox[2], pbox[3], pbox[4], label);
+                //         // }
+                //         image_based_boxes.emplace_back(det.bbox[0], det.bbox[1], det.bbox[2], det.bbox[3], pbox[4], label);
+                //     }
+                job.pro->set_value(image_based_boxes);
+
+                
                 fetch_jobs.clear();
             }
             stream_ = nullptr;
@@ -1972,6 +2200,8 @@ namespace MatrixRobotVision
             }
 
             Size input_size(input_width_, input_height_);
+            image_width_ = image.size().width;
+            image_height_ = image.size().height;
             job.additional.compute(image.size(), input_size);
             tensor->set_stream(stream_);
             tensor->resize(1, 3, input_height_, input_width_);
@@ -2025,6 +2255,8 @@ namespace MatrixRobotVision
     private:
         int input_width_            = 0;
         int input_height_           = 0;
+        int image_width_            = 0;
+        int image_height_           = 0;
         int gpu_                    = 0;
         float confidence_threshold_ = 0;
         float nms_threshold_        = 0;
@@ -2443,7 +2675,7 @@ namespace MatrixRobotVision
         //warmup
         cv::Mat mat(640, 640, CV_8UC3);
         mat.setTo(cv::Scalar(0));
-        this->Inference(mat).get();        
+        // this->Inference(mat).get();        
         return 0;
     }
     std::shared_future<IYolo::BoxArray> Yolo::Inference(cv::Mat input_image)
