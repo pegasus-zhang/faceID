@@ -318,8 +318,8 @@ int main(int argc,char* argv[])
                 auto name    = std::to_string(obj.class_label);
                 auto caption = cv::format("%s %.2f", name.c_str(), obj.confidence);
                 int width    = cv::getTextSize(caption, 0, 1, 2, nullptr).width + 10;
-                cv::rectangle(image_show, cv::Point(obj.left-3, obj.top-33), cv::Point(obj.left + width, obj.top), cv::Scalar(b, g, r), -1);
-                cv::putText(image_show, caption, cv::Point(obj.left, obj.top-5), 0, 1, cv::Scalar::all(0), 2, 16);
+                // cv::rectangle(image_show, cv::Point(obj.left-3, obj.top-33), cv::Point(obj.left + width, obj.top), cv::Scalar(b, g, r), -1);
+                // cv::putText(image_show, caption, cv::Point(obj.left, obj.top-5), 0, 1, cv::Scalar::all(0), 2, 16);
             }
             std::string image_key = files[i].substr(files[i].find_last_of("/")+1);
             root[image_key] = bboxes;

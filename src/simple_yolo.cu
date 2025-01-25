@@ -1827,8 +1827,11 @@ namespace MatrixRobotVision
             float scale_x = to.width / (float)from.width;
             float scale_y = to.height / (float)from.height;
             float scale = std::min(scale_x, scale_y);
-            i2d[0] = scale;  i2d[1] = 0;  i2d[2] = -scale * from.width  * 0.5  + to.width * 0.5 + scale * 0.5 - 0.5;
-            i2d[3] = 0;  i2d[4] = scale;  i2d[5] = -scale * from.height * 0.5 + to.height * 0.5 + scale * 0.5 - 0.5;
+            // i2d[0] = scale;  i2d[1] = 0;  i2d[2] = -scale * from.width  * 0.5  + to.width * 0.5 + scale * 0.5 - 0.5;
+            // i2d[3] = 0;  i2d[4] = scale;  i2d[5] = -scale * from.height * 0.5 + to.height * 0.5 + scale * 0.5 - 0.5;
+
+            i2d[0] = scale;  i2d[1] = 0;  i2d[2] = 0;
+            i2d[3] = 0;  i2d[4] = scale;  i2d[5] = 0;
 
             cv::Mat m2x3_i2d(2, 3, CV_32F, i2d);
             cv::Mat m2x3_d2i(2, 3, CV_32F, d2i);
@@ -1911,14 +1914,14 @@ std::vector<std::vector<float>> generate_anchors(int input_width, int input_heig
     for (int y = 0; y < feature_height; ++y) {  
         for (int x = 0; x < feature_width; ++x) {  
             // 计算 anchor 的中心点坐标  
-            float anchor_x = x * stride + stride / 2.0f;  
-            float anchor_y = y * stride + stride / 2.0f;  
+            float anchor_x = x * stride;  
+            float anchor_y = y * stride;  
 
             // 保存 anchor 坐标  
             anchors.push_back({anchor_x, anchor_y});  
 
-            float anchor_x2 = x * stride + stride / 2.0f; // 偏移量为 stride / 4  
-            float anchor_y2 = y * stride + stride / 2.0f;  
+            float anchor_x2 = x * stride; // 偏移量为 stride / 4  
+            float anchor_y2 = y * stride;  
             anchors.push_back({anchor_x2, anchor_y2});  
         }  
     }  
@@ -1956,12 +1959,12 @@ std::vector<Detection> scrfd_postprocess(
         const auto& anchor = anchors[layer];          // 当前层的 anchor  
         int stride = strides[layer];  
 
-        float max_score = *std::max_element(scores, scores + anchor.size()); // 数组范围 [首地址, 尾地址)  
-        float min_score = *std::min_element(scores, scores + anchor.size());  
+        // float max_score = *std::max_element(scores, scores + anchor.size()); // 数组范围 [首地址, 尾地址)  
+        // float min_score = *std::min_element(scores, scores + anchor.size());  
 
-        // 打印最大值和最小值  
-        std::cout << "最大值: " << max_score << std::endl;  
-        std::cout << "最小值: " << min_score << std::endl;  
+        // // 打印最大值和最小值  
+        // std::cout << "最大值: " << max_score << std::endl;  
+        // std::cout << "最小值: " << min_score << std::endl;  
 
         for (size_t i = 0; i < anchor.size(); ++i) {  
             float score = scores[i];  
@@ -2001,8 +2004,12 @@ std::vector<Detection> scrfd_postprocess(
             float y2_img = x2*d2i[3]+y2*d2i[4]+d2i[5];
 
             for (auto& kp : decoded_keypoints) {  
-                kp[0] = kp[0] / input_width * image_width;  
-                kp[1] = kp[1] / input_height * image_height;  
+                // kp[0] = kp[0] / input_width * image_width;  
+                // kp[1] = kp[1] / input_height * image_height;
+                float kp0 = kp[0];
+                float kp1 = kp[1];
+                kp[0] = kp0*d2i[0]+kp1*d2i[1]+d2i[2];  
+                kp[1] = kp0*d2i[3]+kp1*d2i[4]+d2i[5];
             }  
 
             // 保存检测结果  
@@ -2033,7 +2040,10 @@ std::vector<Detection> scrfd_postprocess(
 
         virtual bool startup(const string& file, int gpuid, float confidence_threshold, float nms_threshold){
 
-            normalize_ = Norm::alpha_beta(1 / 255.0f, 0.0f, ChannelType::SwapRB);            
+            // normalize_ = Norm::alpha_beta(1 / 255.0f, 0.0f, ChannelType::SwapRB); 
+            float mean[3] = {127.5f, 127.5f, 127.5f};
+            float std[3] = {128.0f, 128.0f, 128.0f};
+            normalize_ = Norm::mean_std(mean, std, 1.0f, ChannelType::SwapRB);            
             confidence_threshold_ = confidence_threshold;
             nms_threshold_        = nms_threshold;
             return ThreadSafedAsyncInferImpl::startup(make_tuple(file, gpuid));
@@ -2089,6 +2099,7 @@ std::vector<Detection> scrfd_postprocess(
                     auto& job  = fetch_jobs[ibatch];
                     auto& mono = job.mono_tensor->data();
                     affin_matrix_device.copy_from_gpu(affin_matrix_device.offset(ibatch), mono->get_workspace()->gpu(), 6);
+                    float* a = static_cast<float*>(mono->to_cpu(true).get_data()->cpu());
                     input->copy_from_gpu(input->offset(ibatch), mono->gpu(), mono->count());
                     job.mono_tensor->release();
                 }
@@ -2121,8 +2132,8 @@ std::vector<Detection> scrfd_postprocess(
                 auto anchors = generate_all_anchors(input_width_, input_height_, strides);  
 
                 // 后处理参数  
-                float score_threshold = 0.4;  
-                float iou_threshold = 0.4;  
+                float score_threshold = 0.5;  
+                float iou_threshold = 0.3;  
 
                 // 后处理  
                 std::vector<Detection> detections = scrfd_postprocess(  
