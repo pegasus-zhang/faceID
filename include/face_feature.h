@@ -17,7 +17,7 @@
 
 namespace GeelyRobotVisionGpu
 {
-    class IYolo
+    class IFaceFeature
     {
         public:
             enum class Mode : int {
@@ -39,7 +39,7 @@ namespace GeelyRobotVisionGpu
             typedef std::vector<Box> BoxArray;
 
         public:
-            virtual ~IYolo(){};
+            virtual ~IFaceFeature(){};
             virtual int Init(std::string model_name, bool build_engine, float confidence_threshold=0.4, float nms_threshold=0.4) = 0;
             virtual std::shared_future<cv::cuda::GpuMat> Inference(cv::cuda::GpuMat input_image) = 0;
             virtual std::vector<std::shared_future<cv::cuda::GpuMat>> Inference(std::vector<cv::cuda::GpuMat>& input_image) = 0;
@@ -51,10 +51,10 @@ namespace GeelyRobotVisionGpu
             virtual int SetCalibrationCachePath(std::string path) = 0;            
     };
 
-    class IYoloManager
+    class IFaceFeatureManager
     {
         public:
-           static std::shared_ptr<IYolo> create(); 
+           static std::shared_ptr<IFaceFeature> create(); 
     };
 
 }; // namespace GeelyRobotVisionGpu
