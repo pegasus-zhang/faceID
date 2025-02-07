@@ -2195,7 +2195,7 @@ IYolo::BoxArray scrfd_postprocess(
                 // 输出结果  
                 for (const auto& box : boxes) {  
                     std::cout << "Score: " << box.confidence << "\n";  
-                    std::cout << "BBox: [" << box.left << ", " << box.top << ", " << box.right << ", " << box.top << "]\n";  
+                    std::cout << "BBox: [" << box.left << ", " << box.top << ", " << box.right << ", " << box.bottom << "]\n";  
                     std::cout << "Keypoints: ";  
                     // image_based_boxes.emplace_back(det.bbox[0], det.bbox[1], det.bbox[2], det.bbox[3], det.score, 0);
                     for (const auto& kp : box.keypoints) {  
