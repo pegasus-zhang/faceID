@@ -1893,8 +1893,6 @@ namespace GeelyRobotVisionGpu
 
             engine->print();
 
-            const int MAX_IMAGE_BBOX  = 1024;
-            const int NUM_BOX_ELEMENT = 7;      // left, top, right, bottom, confidence, class, keepflag
             Tensor affin_matrix_device;
             int max_batch_size = engine->get_max_batch_size();
             auto input         = engine->tensor("images");

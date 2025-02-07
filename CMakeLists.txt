@@ -92,6 +92,9 @@ cuda_add_library(face_feature SHARED ${PROJECT_SOURCE_DIR}/src/face_feature.cu)
 target_link_libraries(face_feature ${TRT_LIBS} ${OpenCV_LIBS} )
 SET_TARGET_PROPERTIES (face_feature PROPERTIES VERSION "${_app_version_}")
 
+add_library(face_alignment SHARED ${PROJECT_SOURCE_DIR}/src/face_alignment.cpp)
+target_link_libraries(face_alignment ${OpenCV_LIBS} )
+
 add_executable(yolo_test src/yolo_test.cpp)
 target_link_libraries(yolo_test  yolov8
                                 ${OpenCV_LIBS}
@@ -109,7 +112,8 @@ add_executable(face_feature_test src/face_feature_test.cpp)
 target_link_libraries(face_feature_test  face_feature
                                 jsoncpp
                                 glog
-                                )                             
+                                )       
+                                
 # gtest
 if(GTEST_OPTION)
     message(STATUS "GTEST_OPTION ON.")

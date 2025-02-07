@@ -67,17 +67,6 @@ const char* mode_string(IFaceFeature::Mode type) {
     }
 }
 
-IFaceFeature::BoxArray AddROI(IFaceFeature::BoxArray boxes, cv::Rect2i roi)
-{
-    for(auto& obj : boxes)
-    {
-        obj.left += roi.x;
-        obj.right += roi.x;
-        obj.top += roi.y;
-        obj.bottom += roi.y;
-    }
-    return boxes;
-}
 
 void Str2Vector(std::string str,std::vector<int>& elems, char delim = ',')
 {
