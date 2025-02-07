@@ -88,6 +88,9 @@ cuda_add_library(yolov8_cuda SHARED ${PROJECT_SOURCE_DIR}/src/simple_yolo_cuda.c
 target_link_libraries(yolov8_cuda ${TRT_LIBS} ${OpenCV_LIBS} )
 SET_TARGET_PROPERTIES (yolov8_cuda PROPERTIES VERSION "${_app_version_}")
 
+cuda_add_library(face_feature SHARED ${PROJECT_SOURCE_DIR}/src/face_feature.cu)
+target_link_libraries(face_feature ${TRT_LIBS} ${OpenCV_LIBS} )
+SET_TARGET_PROPERTIES (face_feature PROPERTIES VERSION "${_app_version_}")
 
 add_executable(yolo_test src/yolo_test.cpp)
 target_link_libraries(yolo_test  yolov8
@@ -101,7 +104,12 @@ target_link_libraries(yolo_gpu_test  yolov8_cuda
                                 jsoncpp
                                 glog
                                 )
-                             
+
+add_executable(face_feature_test src/face_feature_test.cpp)
+target_link_libraries(face_feature_test  face_feature
+                                jsoncpp
+                                glog
+                                )                             
 # gtest
 if(GTEST_OPTION)
     message(STATUS "GTEST_OPTION ON.")

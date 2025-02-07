@@ -1,5 +1,5 @@
 #获得发布版本号信息
-mainVersion=`git tag --sort=-taggerdate | head -n 1`
+mainVersion="0.0.1"
 
 #获得编译时间
 current=`date "+%Y-%m-%d %H:%M:%S"`
@@ -20,6 +20,7 @@ echo "install root path:"$installRootPath
 
 #生成makefile
 module_build_dir="build"
+rm -r $module_build_dir
 mkdir $module_build_dir
 cd $module_build_dir
 cmake -D_app_version_=$mainVersion  -D_git_version_=$gitHeadVersion -D_git_log_="$gitHeadLog" -D_install_root_path_=$installRootPath  -DGTEST_OPTION=OFF ..
