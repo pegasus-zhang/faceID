@@ -22,7 +22,7 @@ echo "install root path:"$installRootPath
 module_build_dir="build"
 mkdir $module_build_dir
 cd $module_build_dir
-cmake -D_app_version_=$mainVersion  -D_git_version_=$gitHeadVersion -D_git_log_="$gitHeadLog" -D_install_root_path_=$installRootPath  -DGTEST_OPTION=ON ..
+cmake -D_app_version_=$mainVersion  -D_git_version_=$gitHeadVersion -D_git_log_="$gitHeadLog" -D_install_root_path_=$installRootPath  -DGTEST_OPTION=OFF ..
 
 #编译
 make -j6

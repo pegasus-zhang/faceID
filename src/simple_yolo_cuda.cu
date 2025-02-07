@@ -1953,7 +1953,7 @@ namespace MatrixRobotVisionGpu
                         int label    = pbox[5];
                         int keepflag = pbox[6];
                         if(keepflag == 1){
-                            image_based_boxes.emplace_back(pbox[0], pbox[1], pbox[2], pbox[3], pbox[4], label);
+                            // image_based_boxes.emplace_back(pbox[0], pbox[1], pbox[2], pbox[3], pbox[4], label);
                         }
                     }
                     job.pro->set_value(image_based_boxes);

@@ -233,7 +233,7 @@ int main(int argc,char* argv[])
             for(auto& obj : boxes)
             {
                 uint8_t b, g, r;
-                std::tie(b, g, r) = random_color(obj.class_label);
+                std::tie(b, g, r) = random_color(1);
                 cv::rectangle(image_show, cv::Point(obj.left, obj.top), cv::Point(obj.right, obj.bottom), cv::Scalar(b, g, r), 2);
                 Json::Value bbox;
                 bbox.append(obj.left);
@@ -241,10 +241,11 @@ int main(int argc,char* argv[])
                 bbox.append(obj.right);
                 bbox.append(obj.bottom);
                 bbox.append(obj.confidence);
-                bbox.append(obj.class_label);
+                // bbox.append(obj.class_label);
                 bboxes.append(bbox);
-                std::string name    = std::to_string(obj.class_label);
-                auto caption = cv::format("%s %.2f", name.c_str(), obj.confidence);
+                // std::string name    = std::to_string(obj.class_label);
+                // auto caption = cv::format("%s %.2f", name.c_str(), obj.confidence);
+                auto caption = cv::format("%.2f", obj.confidence);
                 int width    = cv::getTextSize(caption, 0, 1, 2, nullptr).width + 10;
                 cv::rectangle(image_show, cv::Point(obj.left-3, obj.top-33), cv::Point(obj.left + width, obj.top), cv::Scalar(b, g, r), -1);
                 cv::putText(image_show, caption, cv::Point(obj.left, obj.top-5), 0, 1, cv::Scalar::all(0), 2, 16);
@@ -305,21 +306,31 @@ int main(int argc,char* argv[])
             for(auto& obj : boxes)
             {
                 uint8_t b, g, r;
-                std::tie(b, g, r) = random_color(obj.class_label);
-                cv::rectangle(image_show, cv::Point(obj.left, obj.top), cv::Point(obj.right, obj.bottom), cv::Scalar(b, g, r), 5);
+                std::tie(b, g, r) = random_color(1);
+                cv::rectangle(image_show, cv::Point(obj.left, obj.top), cv::Point(obj.right, obj.bottom), cv::Scalar(b, g, r), 2);
                 Json::Value bbox;
                 bbox.append(obj.left);
                 bbox.append(obj.top);
                 bbox.append(obj.right);
                 bbox.append(obj.bottom);
                 bbox.append(obj.confidence);
-                bbox.append(obj.class_label);
+                // bbox.append(obj.class_label);
                 bboxes.append(bbox);
-                auto name    = std::to_string(obj.class_label);
-                auto caption = cv::format("%s %.2f", name.c_str(), obj.confidence);
+                // std::string name    = std::to_string(obj.class_label);
+                // auto caption = cv::format("%s %.2f", name.c_str(), obj.confidence);
+                auto caption = cv::format("%.2f", obj.confidence);
                 int width    = cv::getTextSize(caption, 0, 1, 2, nullptr).width + 10;
-                // cv::rectangle(image_show, cv::Point(obj.left-3, obj.top-33), cv::Point(obj.left + width, obj.top), cv::Scalar(b, g, r), -1);
-                // cv::putText(image_show, caption, cv::Point(obj.left, obj.top-5), 0, 1, cv::Scalar::all(0), 2, 16);
+                cv::rectangle(image_show, cv::Point(obj.left-3, obj.top-33), cv::Point(obj.left + width, obj.top), cv::Scalar(b, g, r), -1);
+                cv::putText(image_show, caption, cv::Point(obj.left, obj.top-5), 0, 1, cv::Scalar::all(0), 2, 16);
+
+                    // 绘制关键点  
+                for (const auto& keypoint : obj.keypoints)  
+                {  
+                    float x = keypoint.first;  
+                    float y = keypoint.second;  
+                    // 绘制关键点为小圆点  
+                    cv::circle(image_show, cv::Point(x, y), 3, cv::Scalar(b, g, r), -1); // 半径为3，填充颜色  
+                }  
             }
             std::string image_key = files[i].substr(files[i].find_last_of("/")+1);
             root[image_key] = bboxes;

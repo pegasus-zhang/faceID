@@ -1859,15 +1859,59 @@ struct Detection {
 };  
 
 // 非极大值抑制（NMS）函数  
-std::vector<int> nms(const std::vector<Detection>& detections, float iou_threshold) {  
+// std::vector<int> nms(const std::vector<Detection>& detections, float iou_threshold) {  
+//     std::vector<int> keep;  
+//     std::vector<bool> suppressed(detections.size(), false);  
+
+//     // 按置信度从高到低排序  
+//     std::vector<int> indices(detections.size());  
+//     std::iota(indices.begin(), indices.end(), 0);  
+//     std::sort(indices.begin(), indices.end(), [&detections](int i,int j) {  
+//         return detections[i].score > detections[j].score;  
+//     });  
+
+//     for (size_t i = 0; i < indices.size(); ++i) {  
+//         int idx = indices[i];  
+//         if (suppressed[idx]) continue;  
+
+//         keep.push_back(idx);  
+//         for (size_t j = i + 1; j < indices.size(); ++j) {  
+//             int idx_j = indices[j];  
+//             if (suppressed[idx_j]) continue;  
+
+//             // 计算 IOU  
+//             const auto& box1 = detections[idx].bbox;  
+//             const auto& box2 = detections[idx_j].bbox;  
+
+//             float x1 = std::max(box1[0], box2[0]);  
+//             float y1 = std::max(box1[1], box2[1]);  
+//             float x2 = std::min(box1[2], box2[2]);  
+//             float y2 = std::min(box1[3], box2[3]);  
+
+//             float inter_area = std::max(0.0f, x2 - x1) * std::max(0.0f, y2 - y1);  
+//             float box1_area = (box1[2] - box1[0]) * (box1[3] - box1[1]);  
+//             float box2_area = (box2[2] - box2[0]) * (box2[3] - box2[1]);  
+//             float iou = inter_area / (box1_area + box2_area - inter_area);  
+
+//             if (iou > iou_threshold) {  
+//                 suppressed[idx_j] = true;  
+//             }  
+//         }  
+//     }  
+
+//     return keep;  
+// }  
+
+// 非极大值抑制（NMS）函数  
+std::vector<int> nms(const IYolo::BoxArray& boxes, float iou_threshold) {  
     std::vector<int> keep;  
-    std::vector<bool> suppressed(detections.size(), false);  
+    std::vector<bool> suppressed(boxes.size(), false);  
 
     // 按置信度从高到低排序  
-    std::vector<int> indices(detections.size());  
+    std::vector<int> indices(boxes.size());  
     std::iota(indices.begin(), indices.end(), 0);  
-    std::sort(indices.begin(), indices.end(), [&detections](int i,int j) {  
-        return detections[i].score > detections[j].score;  
+    std::sort(indices.begin(), indices.end(), [&boxes](int i,int j) {  
+        return boxes[i].confidence > boxes[j].confidence;  
     });  
 
     for (size_t i = 0; i < indices.size(); ++i) {  
@@ -1880,17 +1924,17 @@ std::vector<int> nms(const std::vector<Detection>& detections, float iou_thresho
             if (suppressed[idx_j]) continue;  
 
             // 计算 IOU  
-            const auto& box1 = detections[idx].bbox;  
-            const auto& box2 = detections[idx_j].bbox;  
+            const auto& box1 = boxes[idx];  
+            const auto& box2 = boxes[idx_j];  
 
-            float x1 = std::max(box1[0], box2[0]);  
-            float y1 = std::max(box1[1], box2[1]);  
-            float x2 = std::min(box1[2], box2[2]);  
-            float y2 = std::min(box1[3], box2[3]);  
+            float x1 = std::max(box1.left, box2.left);  
+            float y1 = std::max(box1.top, box2.top);  
+            float x2 = std::min(box1.right, box2.right);  
+            float y2 = std::min(box1.bottom, box2.bottom);  
 
             float inter_area = std::max(0.0f, x2 - x1) * std::max(0.0f, y2 - y1);  
-            float box1_area = (box1[2] - box1[0]) * (box1[3] - box1[1]);  
-            float box2_area = (box2[2] - box2[0]) * (box2[3] - box2[1]);  
+            float box1_area = (box1.right - box1.left) * (box1.bottom - box1.top);  
+            float box2_area = (box2.right - box2.left) * (box2.bottom - box2.top);  
             float iou = inter_area / (box1_area + box2_area - inter_area);  
 
             if (iou > iou_threshold) {  
@@ -1943,14 +1987,15 @@ std::vector<std::vector<std::vector<float>>> generate_all_anchors(
 }  
 
 // SCRFD 后处理函数  
-std::vector<Detection> scrfd_postprocess(  
+IYolo::BoxArray scrfd_postprocess(  
     const std::vector<float*>& outputs, // 模型输出（CPU 内存）  
     const std::vector<std::vector<std::vector<float>>>& anchors, // 所有特征层的 anchor  
     const std::vector<int>& strides,               // FPN stride  
     int input_width, int input_height,             // 模型输入尺寸  
     int image_width, int image_height,             // 原图尺寸  
     float score_threshold, float iou_threshold, float* d2i) {  // 阈值  
-    std::vector<Detection> detections;  
+    // std::vector<Detection> detections;  
+    IYolo::BoxArray boxes;
 
     for (size_t layer = 0; layer < strides.size(); ++layer) {  
         const float* scores = outputs[layer * 3 + 0];  // 置信度  
@@ -1985,7 +2030,8 @@ std::vector<Detection> scrfd_postprocess(
             float y2 = anchor_y + dh * stride;  
 
             // 解码关键点  
-            std::vector<std::vector<float>> decoded_keypoints;  
+            // std::vector<std::vector<float>> decoded_keypoints;  
+            std::vector<std::pair<float, float>> decoded_keypoints;
             for (int k = 0; k < 5; ++k) {  
                 float kx = keypoints[i * 10 + k * 2 + 0];  
                 float ky = keypoints[i * 10 + k * 2 + 1];  
@@ -2006,27 +2052,30 @@ std::vector<Detection> scrfd_postprocess(
             for (auto& kp : decoded_keypoints) {  
                 // kp[0] = kp[0] / input_width * image_width;  
                 // kp[1] = kp[1] / input_height * image_height;
-                float kp0 = kp[0];
-                float kp1 = kp[1];
-                kp[0] = kp0*d2i[0]+kp1*d2i[1]+d2i[2];  
-                kp[1] = kp0*d2i[3]+kp1*d2i[4]+d2i[5];
+                // float kp0 = kp[0];
+                // float kp1 = kp[1];
+                float kp0 = kp.first;
+                float kp1 = kp.second;
+                kp.first = kp0*d2i[0]+kp1*d2i[1]+d2i[2];  
+                kp.second = kp0*d2i[3]+kp1*d2i[4]+d2i[5];
             }  
 
             // 保存检测结果  
-            detections.push_back({score, {x1_img, y1_img, x2_img, y2_img}, decoded_keypoints});  
+            // detections.push_back({score, {x1_img, y1_img, x2_img, y2_img}, decoded_keypoints});  
+            boxes.emplace_back(x1_img, y1_img, x2_img, y2_img, score, decoded_keypoints);
         }  
     }  
 
     // 非极大值抑制（NMS）  
-    std::vector<int> keep = nms(detections, iou_threshold);  
+    std::vector<int> keep = nms(boxes, iou_threshold);  
 
     // 返回最终结果  
-    std::vector<Detection> final_detections;  
+    IYolo::BoxArray final_boxes;  
     for (int idx : keep) {  
-        final_detections.push_back(detections[idx]);  
+        final_boxes.push_back(boxes[idx]);  
     }  
 
-    return final_detections;  
+    return final_boxes;  
 }  
 
 
@@ -2136,21 +2185,21 @@ std::vector<Detection> scrfd_postprocess(
                 float iou_threshold = 0.3;  
 
                 // 后处理  
-                std::vector<Detection> detections = scrfd_postprocess(  
+                IYolo::BoxArray boxes = scrfd_postprocess(  
                     cpu_outputs, anchors, strides, input_width_, input_height_, image_width_, image_height_, score_threshold, iou_threshold, fetch_jobs[0].additional.d2i);  
 
                 
-                int count     = min(MAX_IMAGE_BBOX, (int)detections.size());
+                int count     = min(MAX_IMAGE_BBOX, (int)boxes.size());
                 auto& job     = fetch_jobs[0];
-                auto& image_based_boxes   = job.output;
+                job.output = boxes;
                 // 输出结果  
-                for (const auto& det : detections) {  
-                    std::cout << "Score: " << det.score << "\n";  
-                    std::cout << "BBox: [" << det.bbox[0] << ", " << det.bbox[1] << ", " << det.bbox[2] << ", " << det.bbox[3] << "]\n";  
+                for (const auto& box : boxes) {  
+                    std::cout << "Score: " << box.confidence << "\n";  
+                    std::cout << "BBox: [" << box.left << ", " << box.top << ", " << box.right << ", " << box.top << "]\n";  
                     std::cout << "Keypoints: ";  
-                    image_based_boxes.emplace_back(det.bbox[0], det.bbox[1], det.bbox[2], det.bbox[3], det.score, 0);
-                    for (const auto& kp : det.keypoints) {  
-                        std::cout << "[" << kp[0] << ", " << kp[1] << "] ";  
+                    // image_based_boxes.emplace_back(det.bbox[0], det.bbox[1], det.bbox[2], det.bbox[3], det.score, 0);
+                    for (const auto& kp : box.keypoints) {  
+                        std::cout << "[" << kp.first << ", " << kp.second << "] ";  
                     }  
                     std::cout << "\n";  
                 }  
@@ -2180,7 +2229,7 @@ std::vector<Detection> scrfd_postprocess(
                 //         // }
                 //         image_based_boxes.emplace_back(det.bbox[0], det.bbox[1], det.bbox[2], det.bbox[3], pbox[4], label);
                 //     }
-                job.pro->set_value(image_based_boxes);
+                job.pro->set_value(boxes);
 
                 
                 fetch_jobs.clear();

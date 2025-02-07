@@ -24,12 +24,13 @@ namespace MatrixRobotVision
 
             struct Box{
                 float left, top, right, bottom, confidence;
-                int class_label;
+                // int class_label;
+                std::vector<std::pair<float, float>> keypoints;
 
                 Box() = default;
 
-                Box(float left, float top, float right, float bottom, float confidence, int class_label)
-                :left(left), top(top), right(right), bottom(bottom), confidence(confidence), class_label(class_label){}
+                Box(float left, float top, float right, float bottom, float confidence, const std::vector<std::pair<float, float>>& keypoints = {})
+                :left(left), top(top), right(right), bottom(bottom), confidence(confidence), keypoints(keypoints){}
             };
 
             typedef std::vector<Box> BoxArray;
