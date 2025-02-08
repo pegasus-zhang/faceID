@@ -8,7 +8,7 @@
             "name": "(gdb) Launch",
             "type": "cppdbg",
             "request": "launch",
-            "program": "${workspaceFolder}/workspace/yolo_test",
+            "program": "${workspaceFolder}/workspace/yolo_gpu_test",
             "args": [
                 "-p",
                 "./data",

@@ -360,6 +360,15 @@ int main(int argc,char* argv[])
                         int width    = cv::getTextSize(caption, 0, 1, 2, nullptr).width + 10;
                         cv::rectangle(show_image, cv::Point(obj.left-3, obj.top-33), cv::Point(obj.left + width, obj.top), cv::Scalar(b, g, r), -1);
                         cv::putText(show_image, caption, cv::Point(obj.left, obj.top-5), 0, 1, cv::Scalar::all(0), 2, 16);
+
+                        // 绘制关键点  
+                        for (const auto& keypoint : obj.keypoints)  
+                        {  
+                            float x = keypoint.first;  
+                            float y = keypoint.second;  
+                            // 绘制关键点为小圆点  
+                            cv::circle(show_image, cv::Point(x, y), 3, cv::Scalar(b, g, r), -1); // 半径为3，填充颜色  
+                        }  
                     }                    
                     cv::namedWindow("detection_result",cv::WINDOW_NORMAL);
                     cv::imshow("detection_result",show_image);
