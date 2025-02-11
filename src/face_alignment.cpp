@@ -134,6 +134,25 @@ namespace GeelyRobotVisionGpu
         }
         return kptsRef;
     }
+    std::vector<cv::cuda::GpuMat> FaceAlignment(const cv::cuda::GpuMat &gpuImage, const std::vector<std::vector<cv::Point2f>> &all_kpts)
+    {
+        std::vector<cv::cuda::GpuMat> aligned_faces;
+        for(int i=0;i<all_kpts.size();i++)
+        {
+            // 获取参考人脸关键点，square 为 true 输出尺寸为 112x112，vis 为 true 时显示参考关键点
+            std::vector<cv::Point2f> kptsRef = getReferenceFacialPoints(true, false);
+            std::vector<cv::Point2f> kpts = all_kpts[i];
+            // 通过 CPU 计算仿射变换矩阵（"estimate" 方法）
+            cv::Mat trans = getAffineTransform(kpts, kptsRef, "estimate");
+            // std::cout << "仿射变换矩阵:" << std::endl << trans << std::endl;
+
+            // 利用 GPU 对图像进行人脸对齐和裁剪，输出尺寸为 112x112
+            cv::Size faceSize(112, 112);
+            cv::cuda::GpuMat gpuAlignedFace = alignmentAndCropFace(gpuImage, faceSize, kpts, kptsRef, "estimate");
+            aligned_faces.push_back(gpuAlignedFace);
+        }
+        return aligned_faces;
+    }
 }
 // ----------------------------------------------------------------------------
 // 主函数示例：加载图像、上传到 GPU、生成参考关键点、估计仿射矩阵、
@@ -169,20 +188,10 @@ int main(int argc, char** argv)
     //     cv::Point2f(326.71264648, 409.12332153),
     //     cv::Point2f(419.06210327, 381.41421509)
     // };
-    // 获取参考人脸关键点，square 为 true 输出尺寸为 112x112，vis 为 true 时显示参考关键点
-    std::vector<cv::Point2f> kptsRef = getReferenceFacialPoints(true, false);
-
-    // 通过 CPU 计算仿射变换矩阵（"estimate" 方法）
-    cv::Mat trans = getAffineTransform(kpts, kptsRef, "estimate");
-    std::cout << "仿射变换矩阵:" << std::endl << trans << std::endl;
-
-    // 利用 GPU 对图像进行人脸对齐和裁剪，输出尺寸为 112x112
-    cv::Size faceSize(112, 112);
-    cv::cuda::GpuMat gpuAlignedFace = alignmentAndCropFace(gpuImage, faceSize, kpts, kptsRef, "estimate");
-
+    std::vector<cv::cuda::GpuMat> gpuAlignedFaces = FaceAlignment(gpuImage, {kpts}); // 调用 FaceAlignment 函数进行人脸对齐和裁剪
     // 将对齐后的结果从 GPU 下载到 CPU 端以便显示
     cv::Mat alignedFace;
-    gpuAlignedFace.download(alignedFace);
+    gpuAlignedFaces[0].download(alignedFace);
 
     // cv::imshow("Aligned Face", alignedFace);
     // cv::waitKey(0);

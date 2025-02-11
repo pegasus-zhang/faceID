@@ -90,6 +90,32 @@ void drawTexture_cb(void* userdata)
     cv::ogl::render(*texture);
 }
 
+std::string gpuMatToString(const cv::cuda::GpuMat& gpuMat) {
+    // 检查GpuMat类型
+    if (gpuMat.empty()) {
+        return "GpuMat is empty.\n";
+    }
+
+    // 将GpuMat下载到CPU端的Mat
+    cv::Mat mat;
+    gpuMat.download(mat);
+
+    // 使用 stringstream 存储输出
+    std::stringstream ss;
+    ss << "Matrix elements:\n";
+
+    // 打印Mat中的元素
+    for (int i = 0; i < mat.rows; ++i) {
+        for (int j = 0; j < mat.cols; ++j) {
+            ss << mat.at<float>(i, j) << " ";  // 假设数据是float类型，具体根据实际类型调整
+        }
+        ss << "\n";
+    }
+
+    return ss.str();  // 返回包含矩阵元素的字符串
+}
+
+
 int main(int argc,char* argv[])
 {
     FLAGS_logtostderr=true;
@@ -245,6 +271,7 @@ int main(int argc,char* argv[])
             float inference_average_time = all_used_time / ((frame_index+1) * 1.0);
             LOG(INFO)<<"inference used_time(ms): "<<used_time;
             LOG(INFO)<<"inference_average_time(ms): "<<inference_average_time;
+            // printGpuMatElements(output);
             // Json::Value bboxes;
             // LOG(INFO) <<"boxes size: " << boxes.size();
             // cv::Mat show_image;
@@ -301,6 +328,10 @@ int main(int argc,char* argv[])
                     std::cout<<"No Picture found: "<< files[i] << std::endl;
                     return -1;
                 }
+                // std::cout<<"image.size(): "<<image.size()<<std::endl;
+                // std::cout<<"image.type(): "<<image.type()<<std::endl;
+                // image = cv::Mat(112,112, CV_8UC3,cv::Scalar(1, 2, 3));
+                // cv::imwrite("image.png",image);
                 cv::cuda::GpuMat bgr_image;
                 bgr_image.upload(image);
                 std::shared_future<cv::cuda::GpuMat> output_future;
@@ -326,14 +357,7 @@ int main(int argc,char* argv[])
                 // Json::Value bboxes;
                 LOG(INFO)<<"inference used_time(ms): "<<used_time;
                 LOG(INFO)<<"inference_average_time(ms): "<<inference_average_time;
-                std::cout << "Matrix values:" << std::endl;
-                for (int i = 0; i < output_mat.rows; i++) {
-                    for (int j = 0; j < output_mat.cols; j++) {
-                        std::cout << output_mat.at<float>(i, j) << " ";
-                    }
-                    std::cout << std::endl;
-                }
-                std::cout << std::endl;
+                LOG(INFO) << gpuMatToString(output);
                 // LOG(INFO) <<"boxes size: " << boxes.size();
                 // if(show_flag)
                 // {

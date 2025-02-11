@@ -35,7 +35,7 @@ namespace GeelyRobotVisionGpu
 
     using namespace nvinfer1;
     using namespace std;
-    using namespace cv;
+    // using namespace cv;
 
     #define CURRENT_DEVICE_ID   -1
     #define GPU_BLOCK_THREADS  512
@@ -510,12 +510,12 @@ namespace GeelyRobotVisionGpu
         int position = blockDim.x * blockIdx.x + threadIdx.x;
         if (position >= edge) return;
 
-        float m_x1 = warp_affine_matrix_2_3[0];
-        float m_y1 = warp_affine_matrix_2_3[1];
-        float m_z1 = warp_affine_matrix_2_3[2];
-        float m_x2 = warp_affine_matrix_2_3[3];
-        float m_y2 = warp_affine_matrix_2_3[4];
-        float m_z2 = warp_affine_matrix_2_3[5];
+        float m_x1 = warp_affine_matrix_2_3[0]; //1
+        float m_y1 = warp_affine_matrix_2_3[1]; //0
+        float m_z1 = warp_affine_matrix_2_3[2]; //0
+        float m_x2 = warp_affine_matrix_2_3[3]; //0
+        float m_y2 = warp_affine_matrix_2_3[4]; //1
+        float m_z2 = warp_affine_matrix_2_3[5]; //0
 
         int dx      = position % dst_width;
         int dy      = position / dst_width;
@@ -1877,7 +1877,54 @@ namespace GeelyRobotVisionGpu
             nms_threshold_        = nms_threshold;
             return ThreadSafedAsyncInferImpl::startup(make_tuple(file, gpuid));
         }
+        std::string gpuMatToString(const cv::cuda::GpuMat& gpuMat) {
+            // 检查GpuMat类型
+            if (gpuMat.empty()) {
+                return "GpuMat is empty.\n";
+            }
 
+            // 将GpuMat下载到CPU端的Mat
+            cv::Mat mat;
+            gpuMat.download(mat);
+
+            // 使用 stringstream 存储输出
+            std::stringstream ss;
+            ss << "Matrix elements:\n";
+
+            // 打印Mat中的元素
+            for (int i = 0; i < mat.rows; ++i) {
+                for (int j = 0; j < mat.cols; ++j) {
+                    ss << mat.at<float>(i, j) << " ";  // 假设数据是float类型，具体根据实际类型调整
+                }
+                ss << "\n";
+            }
+
+            return ss.str();  // 返回包含矩阵元素的字符串
+        }         
+        cv::cuda::GpuMat postprocess(const cv::cuda::GpuMat& input) 
+        {
+            // Ensure the input is in float format (CV_32F)
+            CV_Assert(input.type() == CV_32F);
+
+            cv::cuda::GpuMat norm, result;
+            // Step 1: Compute the squared L2 norm of each row
+            cv::cuda::GpuMat squared;
+            cv::cuda::multiply(input, input, squared);  // Element-wise square
+            cv::cuda::reduce(squared, norm, 1, cv::REDUCE_SUM, CV_32F);  // Sum along columns
+            cv::cuda::sqrt(norm, norm);  // Square root of sum
+
+            // Step 2: Divide the input by the L2 norm to normalize
+            // 确保src2大小和类型匹配
+            if (norm.size() != input.size()) {
+                // 使用广播处理不同的维度，调整norm大小
+                cv::cuda::resize(norm, norm, input.size());
+            }
+            cv::cuda::divide(input, norm, result);  // Normalize the input
+
+            return result;
+        }
+
+       
         virtual void worker(promise<bool>& result) override{
 
             string file = get<0>(start_param_);
@@ -1925,6 +1972,7 @@ namespace GeelyRobotVisionGpu
                     input->copy_from_gpu(input->offset(ibatch), mono->gpu(), mono->count());
                     job.mono_tensor->release();
                 }
+                // input->save_to_file("input.in");
                 engine->forward(false);
                 for(int ibatch = 0; ibatch < infer_batch_size; ++ibatch){
                     
@@ -1933,9 +1981,12 @@ namespace GeelyRobotVisionGpu
                     cv::cuda::GpuMat gpu_mat;
                     gpu_mat.create(1, output->size(1), CV_32FC1); // 分配内存
                     cudaMemcpy(gpu_mat.data, image_based_output, output->size(1) * sizeof(float), cudaMemcpyDeviceToDevice);
-                    job.output = gpu_mat;
+                    // INFO(gpuMatToString(gpu_mat).c_str());
+                    //postprocess
+                    job.output = postprocess(gpu_mat);
+                    // INFO(gpuMatToString(job.output).c_str());
                 }
-
+                // INFO("postprocess time: " << timestamp_now_float() - begin_timer);
                 for(int ibatch = 0; ibatch < infer_batch_size; ++ibatch){
                     auto& job     = fetch_jobs[ibatch];
                     auto& output   = job.output;
@@ -1968,14 +2019,23 @@ namespace GeelyRobotVisionGpu
                 tensor = make_shared<Tensor>();
                 tensor->set_workspace(make_shared<MixMemory>());
             }
+            // 1. Resize 到 128x128
+            cv::cuda::GpuMat resized_image;
+            cv::cuda::resize(image, resized_image, cv::Size(128, 128));
 
-            Size input_size(input_width_, input_height_);
-            job.additional.compute(image.size(), input_size);
+            // 2. Center Crop 到 112x112
+            int crop_x = (128 - 112) / 2;
+            int crop_y = (128 - 112) / 2;
+            cv::Rect cropRegion(crop_x, crop_y, 112, 112);
+            cv::cuda::GpuMat cropped = resized_image(cropRegion);
+
+            cv::Size input_size(input_width_, input_height_);
+            job.additional.compute(cropped.size(), input_size);
             
             tensor->set_stream(stream_);
             tensor->resize(1, 3, input_height_, input_width_);
 
-            size_t size_image      = image.cols * image.rows * 3;
+            size_t size_image      = cropped.cols * cropped.rows * 3;
             size_t size_matrix     = upbound(sizeof(job.additional.d2i), 32);
             auto workspace         = tensor->get_workspace();
             uint8_t* gpu_workspace        = (uint8_t*)workspace->gpu(size_matrix + size_image);
@@ -1990,16 +2050,16 @@ namespace GeelyRobotVisionGpu
             // double start_time = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now().time_since_epoch()).count()/1000.0;
             // checkCudaRuntime(cudaMemcpyAsync(image_device, image.data, size_image, cudaMemcpyDeviceToDevice, stream_));
             const dim3 block(32, 8);
-            const dim3 grid(cv::divUp(image.cols, block.x),
-                            cv::divUp(image.rows, block.y));
+            const dim3 grid(cv::divUp(cropped.cols, block.x),
+                            cv::divUp(cropped.rows, block.y));
             // std::cout<<"grid: "<<grid.x << ", " << grid.y << ", " << grid.z <<std::endl;
             // std::cout<<"block: "<<block.x << ", " << block.y << ", " << block.z <<std::endl;
-            checkCudaKernel(GpuMatToContinues<<<grid, block, 0, stream_>>>(image, image_device));
+            checkCudaKernel(GpuMatToContinues<<<grid, block, 0, stream_>>>(cropped, image_device));
             // double stop_time = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now().time_since_epoch()).count()/1000.0;
             checkCudaRuntime(cudaMemcpyAsync(affine_matrix_device, affine_matrix_host, sizeof(job.additional.d2i), cudaMemcpyHostToDevice, stream_));
 
             warp_affine_bilinear_and_normalize_plane(
-                image_device,         image.cols * 3,       image.cols,       image.rows, 
+                image_device,         cropped.cols * 3,       cropped.cols,       cropped.rows, 
                 tensor->gpu<float>(), input_width_,         input_height_, 
                 affine_matrix_device, 114, 
                 normalize_, stream_
@@ -2032,7 +2092,7 @@ namespace GeelyRobotVisionGpu
         Norm normalize;
         normalize = Norm::alpha_beta(1 / 255.0f, 0.0f, ChannelType::SwapRB);
         
-        Size input_size(tensor->size(3), tensor->size(2));
+        cv::Size input_size(tensor->size(3), tensor->size(2));
         AffineMatrix affine;
         affine.compute(image.size(), input_size);
 

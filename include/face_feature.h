@@ -1,5 +1,5 @@
-#ifndef SIMPLE_YOLO_CUDA_HPP
-#define SIMPLE_YOLO_CUDA_HPP
+#ifndef FACE_FEATURE_H
+#define FACE_FEATURE_H
 
 /*
   简单的yolo接口，容易集成但是高性能
@@ -13,6 +13,7 @@
 #include <opencv2/cudacodec.hpp>
 #include <opencv2/cudaimgproc.hpp> 
 #include <opencv2/cudawarping.hpp>
+#include <opencv2/cudaarithm.hpp>
 #include <opencv2/core/opengl.hpp>
 
 namespace GeelyRobotVisionGpu
@@ -47,4 +48,4 @@ namespace GeelyRobotVisionGpu
 
 }; // namespace GeelyRobotVisionGpu
 
-#endif // SIMPLE_YOLO_CUDA_HPP
+#endif // FACE_FEATURE_H
