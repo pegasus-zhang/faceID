@@ -120,6 +120,7 @@ int main(int argc,char* argv[])
     cmd_parser.add("int8",'\0',"INT8 inference");
     cmd_parser.add("compile",'\0',"build engine");
     cmd_parser.add("video",'\0',"input is video file");
+    cmd_parser.add("ros",'\0',"input is ros msg");
     cmd_parser.add<double>("confidence",'\0',"confidence threshold",false,0.4f);
     cmd_parser.add<double>("nms",'\0',"nms threshold",false,0.4f);
     cmd_parser.add<std::string>("roi",'\0',"set roi, separate with comma. for example, x,y,width,height",false);
@@ -127,6 +128,7 @@ int main(int argc,char* argv[])
     cmd_parser.add("show",'\0',"show result flag");
     cmd_parser.parse_check(argc,argv);
     bool is_video = cmd_parser.exist("video");
+    bool is_ros = cmd_parser.exist("ros");
     std::string data_path = cmd_parser.get<std::string>("data_path");
     if(!is_video && data_path.back()!='/')
     {
@@ -296,8 +298,130 @@ int main(int argc,char* argv[])
         }
         reader.release();
     }
-    else
-    {
+    else if(is_ros){       
+        std::unique_ptr<RosAdapter> ros_adapter;  // 基类智能指针
+        #ifdef ROS_ENABLE  
+            ros_adapter = std::make_unique<Ros1Adapter>();  
+        #endif  
+
+        #ifdef ROS2_ENABLE  
+            ros_adapter = std::make_unique<Ros2Adapter>();  
+        #endif
+        
+        if (!ros_adapter) {  
+        std::cerr << "No ROS version enabled. Define either ROS_ENABLE or ROS2_ENABLE." << std::endl;  
+        return 1;  
+        }  
+
+        // 初始化 ROS 节点  
+        ros_adapter->init(argc, argv, "faceID");  
+
+        // 订阅消息  
+        ros_adapter->subscribe("/cam_front/csi_cam/image_raw/compressed", 10);  
+
+        // 创建一个线程用于运行 ROS spin  
+        std::thread spin_thread([&]() {  
+            ros_adapter->spin();  
+        }); 
+        int count=0;
+
+        while(true)
+        {
+
+            auto msg = ros_adapter->popMessage();  
+            // boost::shared_ptr<void> image_msg;  
+            cv::Mat image;
+            if (msg){
+                #ifdef ROS_ENABLE  
+                            auto image_msg = boost::static_pointer_cast<Ros1Adapter::CompressedImage>(msg);  
+                            ROS_INFO("Processing image from queue...");  
+                            std::cout << "Image size: " << image_msg->data.size() << " bytes" << std::endl;  
+                            image = cv::imdecode(cv::Mat(image_msg->data), cv::IMREAD_COLOR); // 解码为 BGR 图像  
+                #endif  
+
+                #ifdef ROS2_ENABLE  
+                            auto image_msg = boost::static_pointer_cast<Ros2Adapter::CompressedImage>(msg);  
+                            RCLCPP_INFO(rclcpp::get_logger("fifo_queue_example"), "Processing image from queue...");  
+                            std::cout << "Image size: " << image_msg->data.size() << " bytes" << std::endl; 
+                            image = cv::imdecode(cv::Mat(image_msg->data), cv::IMREAD_COLOR); // 解码为 BGR 图像  
+                #endif
+            } else{
+                std::cerr << "No message received from ros_adapter." << std::endl;
+                continue;
+            }
+            // cv::Mat image = cv::imdecode(cv::Mat(image_msg->data), cv::IMREAD_COLOR); // 解码为 BGR 图像  
+            if (image.empty()) {  
+                throw std::runtime_error("Failed to decode image from compressed data.");  
+            }   
+            cv::cuda::GpuMat bgr_image;
+            bgr_image.upload(image);
+            std::shared_future<IYolo::BoxArray> boxes_future;
+            auto begin_timer = timestamp_now_float();
+            if(cmd_parser.exist("roi"))
+            {
+                auto roi = cv::Rect2i(roi_vect[0],roi_vect[1],roi_vect[2],roi_vect[3]);
+                cv::cuda::GpuMat roi_image = bgr_image(roi);
+                bgr_image = roi_image;
+            }
+            if(cmd_parser.exist("resize"))
+            {
+                cv::resize(bgr_image,bgr_image,cv::Size(resize_vect[0],resize_vect[1]));
+            }
+            boxes_future = engine->Inference(bgr_image);
+            auto boxes = boxes_future.get();
+            float used_time = (timestamp_now_float() - begin_timer);
+            all_used_time += used_time;
+            float inference_average_time = all_used_time / ((count+1) * 1.0);
+            count++;
+            Json::Value bboxes;
+            LOG(INFO)<<"inference used_time(ms): "<<used_time;
+            LOG(INFO)<<"inference_average_time(ms): "<<inference_average_time;
+            LOG(INFO) <<"boxes size: " << boxes.size();
+            if(show_flag)
+            {
+                cv::Mat show_image;
+                bgr_image.download(show_image);
+                for(auto& obj : boxes)
+                {
+                    uint8_t b, g, r;
+                    std::tie(b, g, r) = random_color(1);
+                    cv::rectangle(show_image, cv::Point(obj.left, obj.top), cv::Point(obj.right, obj.bottom), cv::Scalar(b, g, r), 2);
+                    Json::Value bbox;
+                    bbox.append(obj.left);
+                    bbox.append(obj.top);
+                    bbox.append(obj.right);
+                    bbox.append(obj.bottom);
+                    bbox.append(obj.confidence);
+                    // bbox.append(obj.class_label);
+                    bboxes.append(bbox);
+                    // std::string name    = std::to_string(obj.class_label);
+                    // auto caption = cv::format("%s %.2f", name.c_str(), obj.confidence);
+                    auto caption = cv::format("%.2f", obj.confidence);
+                    int width    = cv::getTextSize(caption, 0, 1, 2, nullptr).width + 10;
+                    cv::rectangle(show_image, cv::Point(obj.left-3, obj.top-33), cv::Point(obj.left + width, obj.top), cv::Scalar(b, g, r), -1);
+                    cv::putText(show_image, caption, cv::Point(obj.left, obj.top-5), 0, 1, cv::Scalar::all(0), 2, 16);
+
+                    // 绘制关键点  
+                    for (const auto& keypoint : obj.keypoints)  
+                    {  
+                        float x = keypoint.first;  
+                        float y = keypoint.second;  
+                        // 绘制关键点为小圆点  
+                        cv::circle(show_image, cv::Point(x, y), 3, cv::Scalar(b, g, r), -1); // 半径为3，填充颜色  
+                    }  
+                }                    
+                cv::namedWindow("detection_result",cv::WINDOW_NORMAL);
+                cv::imshow("detection_result",show_image);
+                cv::waitKey(1);
+                if(pause_flag)
+                {
+                    cv::waitKey(0);
+                }
+            }
+        }
+          
+    }
+    else{
         std::vector<cv::String> files_;
         files_.reserve(10000);
         cv::glob(data_path + "/*", files_, false);

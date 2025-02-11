@@ -10,6 +10,27 @@ set(CMAKE_BUILD_TYPE Debug)
 SET(LIBRARY_OUTPUT_PATH ${CMAKE_CURRENT_SOURCE_DIR}/lib)
 set(EXECUTABLE_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/workspace)
 
+
+# 添加选项以启用 ROS1 或 ROS2  
+option(ENABLE_ROS1 "Enable ROS1 support" ON)  
+option(ENABLE_ROS2 "Enable ROS2 support" OFF)  
+
+# 检查是否同时启用了 ROS1 和 ROS2  
+if(ENABLE_ROS1 AND ENABLE_ROS2)  
+    message(FATAL_ERROR "Cannot enable both ROS1 and ROS2 at the same time.")  
+endif()  
+
+# 根据选项定义编译宏  
+if(ENABLE_ROS1)  
+    add_definitions(-DROS_ENABLE)  
+    message(STATUS "ROS1 support enabled.")  
+endif()  
+
+if(ENABLE_ROS2)  
+    add_definitions(-DROS2_ENABLE)  
+    message(STATUS "ROS2 support enabled.")  
+endif() 
+
 #版本信息
 add_definitions(-D__app_version__=\"${_app_version_}\")
 add_definitions(-D__git_version__=\"${_git_version_}\")
@@ -23,6 +44,55 @@ message(STATUS "${_app_version_}")
 include_directories(include)
 link_directories(lib)
 
+
+# Detect ROS Version  
+# if(DEFINED ENV{ROS_VERSION})  
+#     if($ENV{ROS_VERSION} EQUAL 1)  
+#         message(STATUS "Building for ROS1")  
+#         find_package(catkin REQUIRED COMPONENTS  
+#             roscpp  
+#             std_msgs  
+#         )  
+#         catkin_package(  
+#             INCLUDE_DIRS include  
+#             LIBRARIES ${PROJECT_NAME}  
+#             CATKIN_DEPENDS roscpp std_msgs  
+#         )  
+#         include_directories(${catkin_INCLUDE_DIRS})  
+#         add_definitions(-DUSING_ROS1)  
+#     elseif($ENV{ROS_VERSION} EQUAL 2)  
+#         message(STATUS "Building for ROS2")  
+#         find_package(ament_cmake REQUIRED)  
+#         find_package(rclcpp REQUIRED)  
+#         find_package(std_msgs REQUIRED)  
+#         include_directories(${rclcpp_INCLUDE_DIRS} ${std_msgs_INCLUDE_DIRS})  
+#         add_definitions(-DUSING_ROS2)  
+#     else()  
+#         message(FATAL_ERROR "Unsupported ROS version: $ENV{ROS_VERSION}")  
+#     endif()  
+# else()  
+#     message(STATUS "No ROS environment detected. Building without ROS support.")  
+# endif()  
+
+
+# 如果启用了 ROS1  
+if(ENABLE_ROS1)  
+    find_package(catkin REQUIRED COMPONENTS  
+        roscpp  
+        sensor_msgs  
+    )  
+    include_directories(${catkin_INCLUDE_DIRS})  
+    link_directories(${catkin_LIBRARY_DIRS})  
+endif()  
+
+# 如果启用了 ROS2  
+if(ENABLE_ROS2)  
+    find_package(rclcpp REQUIRED)  
+    find_package(sensor_msgs REQUIRED)
+    find_package(ament_cmake REQUIRED)    
+    include_directories(${rclcpp_INCLUDE_DIRS} ${sensor_msgs_INCLUDE_DIRS})  
+    link_directories(${rclcpp_LIBRARY_DIRS} ${sensor_msgs_LIBRARY_DIRS})  
+endif()  
 # #jsoncpp
 # set(jsoncpp_DIR ${MXT_CONTROL_SDK_LIB_SYSTEM_PATH}/jsoncpp/lib/cmake/jsoncpp)
 # find_package(jsoncpp 1.9.5 REQUIRED)
@@ -100,8 +170,22 @@ add_executable(yolo_gpu_test src/yolo_gpu_test.cpp)
 target_link_libraries(yolo_gpu_test  yolov8_cuda
                                 jsoncpp
                                 glog
+                                pthread
                                 )
-                             
+
+# # ROS-Specific Targets [ADDED]  
+# if(DEFINED ENV{ROS_VERSION})  
+# if($ENV{ROS_VERSION} EQUAL 1) # [ADDED]  
+#     add_executable(yolo_ros1_node src/yolo_ros1_node.cpp) # [ADDED]  
+#     target_link_libraries(yolo_ros1_node ${catkin_LIBRARIES} yolov8) # [ADDED]  
+#     add_dependencies(yolo_ros1_node ${catkin_EXPORTED_TARGETS}) # [ADDED]  
+# elseif($ENV{ROS_VERSION} EQUAL 2) # [ADDED]  
+#     add_executable(yolo_ros2_node src/yolo_ros2_node.cpp) # [ADDED]  
+#     target_link_libraries(yolo_ros2_node rclcpp yolov8) # [ADDED]  
+#     ament_target_dependencies(yolo_ros2_node rclcpp std_msgs) # [ADDED]  
+# endif()  
+# endif() 
+
 # gtest
 if(GTEST_OPTION)
     message(STATUS "GTEST_OPTION ON.")
@@ -150,3 +234,9 @@ add_custom_target(uninstall
     COMMAND ${CMAKE_COMMAND} -E remove_directory "${CMAKE_INSTALL_PREFIX}/lib/cmake/yolov8"
     COMMENT "Uninstalling YoloV8"
 )
+
+# ROS2 Install [ADDED]  
+if(DEFINED ENV{ROS_VERSION} AND $ENV{ROS_VERSION} EQUAL 2) # [ADDED]  
+    ament_package() # [ADDED]  
+endif()  
+

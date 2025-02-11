@@ -2746,5 +2746,5 @@ IYolo::BoxArray scrfd_postprocess(
         std::shared_ptr<IYolo> yolov8_infer_ptr(new Yolo());
         return yolov8_infer_ptr;
     }
-
+  
 };
