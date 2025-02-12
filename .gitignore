@@ -1,2 +1,7 @@
 build/
-workspace/
+workspace/yolo_gpu_test
+workspace/yolo_test
+lib/libyolov8.so
+lib/libyolov8.so.
+lib/libyolov8_cuda.so
+lib/libyolov8_cuda.so.

@@ -109,6 +109,7 @@ bool running = true;
 void signalHandler(int signum) {  
     std::cout << "\nInterrupt signal (" << signum << ") received. Exiting...\n";  
     running = false; // 设置运行标志为 false，退出循环  
+    ros::shutdown();
 }  
 
 int main(int argc,char* argv[])
@@ -309,18 +310,6 @@ int main(int argc,char* argv[])
         reader.release();
     }
     else if(is_ros){  
-        signal(SIGINT, signalHandler);   
-        
-        sigset_t sigset;  
-        sigemptyset(&sigset);  
-        sigaddset(&sigset, SIGINT);  
-
-        // 检查是否屏蔽了 SIGINT  
-        sigprocmask(SIG_UNBLOCK, NULL, &sigset);  
-        if (sigismember(&sigset, SIGINT)) {  
-            std::cout << "SIGINT is blocked, unblocking it..." << std::endl;  
-            sigprocmask(SIG_UNBLOCK, &sigset, NULL);  
-        }   
 
         std::unique_ptr<RosAdapter> ros_adapter;  // 基类智能指针
         #ifdef ROS_ENABLE  
@@ -347,7 +336,7 @@ int main(int argc,char* argv[])
             ros_adapter->spin();  
         }); 
         int count=0;
-
+        signal(SIGINT, signalHandler);   
         while(running)
         {
 
@@ -442,6 +431,11 @@ int main(int argc,char* argv[])
                 }
             }
         }
+
+        // 等待 spin_thread 结束  
+        if (spin_thread.joinable()) {  
+            spin_thread.join();  
+        }  
         return 0;
           
     }
