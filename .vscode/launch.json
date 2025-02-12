@@ -14,7 +14,10 @@
                 "./data",
                 "-m",
                 "./weights/det_10g.engine",
-                "--fp16"
+                "--fp16",
+                // "--show",
+                // "--pause",
+                "--ros"
             ],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}",

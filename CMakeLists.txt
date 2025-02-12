@@ -78,7 +78,8 @@ link_directories(lib)
 # 如果启用了 ROS1  
 if(ENABLE_ROS1)  
     find_package(catkin REQUIRED COMPONENTS  
-        roscpp  
+        roscpp
+        rosconsole  
         sensor_msgs  
     )  
     include_directories(${catkin_INCLUDE_DIRS})  
@@ -155,7 +156,7 @@ SET_TARGET_PROPERTIES (yolov8 PROPERTIES VERSION "${_app_version_}")
 
 
 cuda_add_library(yolov8_cuda SHARED ${PROJECT_SOURCE_DIR}/src/simple_yolo_cuda.cu)
-target_link_libraries(yolov8_cuda ${TRT_LIBS} ${OpenCV_LIBS} )
+target_link_libraries(yolov8_cuda ${TRT_LIBS} ${OpenCV_LIBS} ${catkin_LIBRARIES})
 SET_TARGET_PROPERTIES (yolov8_cuda PROPERTIES VERSION "${_app_version_}")
 
 

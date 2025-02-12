@@ -16,6 +16,7 @@
 #include <glog/logging.h>
 #include "jsoncpp/json/json.h"
 #include <fstream>
+#include <csignal>  
 
 
 using namespace MatrixRobotVisionGpu;
@@ -100,6 +101,15 @@ void drawTexture_cb(void* userdata)
     cv::ogl::Texture2D* texture = static_cast<cv::ogl::Texture2D*>(userdata);
     cv::ogl::render(*texture);
 }
+
+// 全局变量，用于控制循环  
+bool running = true;  
+
+// 信号处理函数  
+void signalHandler(int signum) {  
+    std::cout << "\nInterrupt signal (" << signum << ") received. Exiting...\n";  
+    running = false; // 设置运行标志为 false，退出循环  
+}  
 
 int main(int argc,char* argv[])
 {
@@ -298,7 +308,20 @@ int main(int argc,char* argv[])
         }
         reader.release();
     }
-    else if(is_ros){       
+    else if(is_ros){  
+        signal(SIGINT, signalHandler);   
+        
+        sigset_t sigset;  
+        sigemptyset(&sigset);  
+        sigaddset(&sigset, SIGINT);  
+
+        // 检查是否屏蔽了 SIGINT  
+        sigprocmask(SIG_UNBLOCK, NULL, &sigset);  
+        if (sigismember(&sigset, SIGINT)) {  
+            std::cout << "SIGINT is blocked, unblocking it..." << std::endl;  
+            sigprocmask(SIG_UNBLOCK, &sigset, NULL);  
+        }   
+
         std::unique_ptr<RosAdapter> ros_adapter;  // 基类智能指针
         #ifdef ROS_ENABLE  
             ros_adapter = std::make_unique<Ros1Adapter>();  
@@ -325,7 +348,7 @@ int main(int argc,char* argv[])
         }); 
         int count=0;
 
-        while(true)
+        while(running)
         {
 
             auto msg = ros_adapter->popMessage();  
@@ -419,6 +442,7 @@ int main(int argc,char* argv[])
                 }
             }
         }
+        return 0;
           
     }
     else{
