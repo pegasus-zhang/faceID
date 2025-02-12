@@ -416,8 +416,8 @@ int main(int argc,char* argv[])
                     // 绘制关键点  
                     for (const auto& keypoint : obj.keypoints)  
                     {  
-                        float x = keypoint.first;  
-                        float y = keypoint.second;  
+                        float x = keypoint.x;  
+                        float y = keypoint.y;  
                         // 绘制关键点为小圆点  
                         cv::circle(show_image, cv::Point(x, y), 3, cv::Scalar(b, g, r), -1); // 半径为3，填充颜色  
                     }  
@@ -506,8 +506,8 @@ int main(int argc,char* argv[])
                         // 绘制关键点  
                         for (const auto& keypoint : obj.keypoints)  
                         {  
-                            float x = keypoint.first;  
-                            float y = keypoint.second;  
+                            float x = keypoint.x;  
+                            float y = keypoint.y;  
                             // 绘制关键点为小圆点  
                             cv::circle(show_image, cv::Point(x, y), 3, cv::Scalar(b, g, r), -1); // 半径为3，填充颜色  
                         }  

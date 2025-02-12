@@ -1996,11 +1996,11 @@ IYolo::BoxArray scrfd_postprocess(
 
             // 解码关键点  
             // std::vector<std::vector<float>> decoded_keypoints;  
-            std::vector<std::pair<float, float>> decoded_keypoints;
+            std::vector<cv::Point> decoded_keypoints;
             for (int k = 0; k < 5; ++k) {  
                 float kx = keypoints[i * 10 + k * 2 + 0];  
                 float ky = keypoints[i * 10 + k * 2 + 1];  
-                decoded_keypoints.push_back({anchor_x + kx * stride, anchor_y + ky * stride});  
+                decoded_keypoints.push_back(cv::Point(anchor_x + kx * stride, anchor_y + ky * stride));  
             }  
 
             // 映射到原图尺寸  
@@ -2019,10 +2019,10 @@ IYolo::BoxArray scrfd_postprocess(
                 // kp[1] = kp[1] / input_height * image_height;
                 // float kp0 = kp[0];
                 // float kp1 = kp[1];
-                float kp0 = kp.first;
-                float kp1 = kp.second;
-                kp.first = kp0*d2i[0]+kp1*d2i[1]+d2i[2];  
-                kp.second = kp0*d2i[3]+kp1*d2i[4]+d2i[5];
+                float kp0 = kp.x;
+                float kp1 = kp.y;
+                kp.x = kp0*d2i[0]+kp1*d2i[1]+d2i[2];  
+                kp.y = kp0*d2i[3]+kp1*d2i[4]+d2i[5];
             }  
 
             // 保存检测结果  
@@ -2160,7 +2160,7 @@ IYolo::BoxArray scrfd_postprocess(
                     std::cout << "Keypoints: ";  
                     // image_based_boxes.emplace_back(det.bbox[0], det.bbox[1], det.bbox[2], det.bbox[3], det.score, 0);
                     for (const auto& kp : box.keypoints) {  
-                        std::cout << "[" << kp.first << ", " << kp.second << "] ";  
+                        std::cout << "[" << kp.x << ", " << kp.y << "] ";  
                     }  
                     std::cout << "\n";  
                 }  
