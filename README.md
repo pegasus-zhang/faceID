@@ -4,6 +4,9 @@
 - OpenCV4.5.0     （可修改）
 - TensorRT-8.4.3.1
 
+人脸检测部分
+bash ./build_yolov8.sh
+./workspace/yolo_gpu_test -p ./data -m ./weights/det_10g.engine --fp16 --show --pause
 
 C++部署代码存放在example-yolov8 目录中，部署只需要simple_yolo.h和simple_yolo.cu这两个文件，yolo_test.cpp中给出了实例代码。yolo_test.cpp同时也是个测试代码，可以使用yolo_test.cpp生成的可执行文件对onnx模型进行测试。测试数据可以是图片也可以是视频   
 * 如果测试数据是图片
