@@ -14,7 +14,6 @@
 #include <opencv2/cudawarping.hpp>
 #include <opencv2/core/opengl.hpp>
 #include <glog/logging.h>
-#include "jsoncpp/json/json.h"
 #include <fstream>
 
 
@@ -211,10 +210,6 @@ int main(int argc,char* argv[])
     engine->Init(onnx_file,compile_flag,confidence_threshold, nms_threshold);
     // engine->Init(onnx_file,1);
     LOG(INFO) << "----------engine init!----------";
-    Json::Value root;
-    Json::Value labelme_head, labelme_flags;
-    labelme_head["version"] = "5.1.1";
-    labelme_head["flags"] = labelme_flags;
     float all_used_time = 0.0;
     if(is_video)
     {

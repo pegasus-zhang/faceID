@@ -75,7 +75,6 @@ if(With_TRT)
 endif()
 # TensorRT
 
-
 # set(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} -std=c++11 -Wall -O0 -Wfatal-errors -pthread -w -g")
 # set(CUDA_NVCC_FLAGS "${CUDA_NVCC_FLAGS} -std=c++11 -O0 -Xcompiler -fPIC -g -w ${CUDA_GEN_CODE}")
 
@@ -94,6 +93,20 @@ SET_TARGET_PROPERTIES (face_feature PROPERTIES VERSION "${_app_version_}")
 
 add_library(face_alignment SHARED ${PROJECT_SOURCE_DIR}/src/face_alignment.cpp)
 target_link_libraries(face_alignment ${OpenCV_LIBS} )
+SET_TARGET_PROPERTIES (face_alignment PROPERTIES VERSION "${_app_version_}")
+
+cuda_add_library(cuda_utils SHARED ${PROJECT_SOURCE_DIR}/src/cuda_utils.cu)
+target_link_libraries(cuda_utils ${TRT_LIBS} ${OpenCV_LIBS} glog)
+SET_TARGET_PROPERTIES (cuda_utils PROPERTIES VERSION "${_app_version_}")
+
+add_library(face_matcher SHARED ${PROJECT_SOURCE_DIR}/src/face_matcher.cpp)
+target_link_libraries(face_matcher ${OpenCV_LIBS} cuda_utils)
+SET_TARGET_PROPERTIES (face_matcher PROPERTIES VERSION "${_app_version_}")
+
+add_executable(face_matcher_test  src/face_matcher_test.cpp)
+target_link_libraries(face_matcher_test  face_matcher 
+                                glog
+                                ) 
 
 add_executable(yolo_test src/yolo_test.cpp)
 target_link_libraries(yolo_test  yolov8
@@ -110,10 +123,10 @@ target_link_libraries(yolo_gpu_test  yolov8_cuda
 
 add_executable(face_feature_test src/face_feature_test.cpp)
 target_link_libraries(face_feature_test  face_feature
-                                jsoncpp
                                 glog
                                 )       
                                 
+
 # gtest
 if(GTEST_OPTION)
     message(STATUS "GTEST_OPTION ON.")
