@@ -2025,11 +2025,11 @@ IScrfd::BoxArray scrfd_postprocess(
 
             // 解码关键点  
             // std::vector<std::vector<float>> decoded_keypoints;  
-            std::vector<cv::Point> decoded_keypoints;
+            std::vector<cv::Point2f> decoded_keypoints;
             for (int k = 0; k < 5; ++k) {  
                 float kx = keypoints[i * 10 + k * 2 + 0];  
                 float ky = keypoints[i * 10 + k * 2 + 1];  
-                decoded_keypoints.push_back(cv::Point(anchor_x + kx * stride, anchor_y + ky * stride));  
+                decoded_keypoints.push_back(cv::Point2f(anchor_x + kx * stride, anchor_y + ky * stride));  
             }  
 
             // 映射到原图尺寸  
