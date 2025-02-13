@@ -103,6 +103,10 @@ add_library(face_matcher SHARED ${PROJECT_SOURCE_DIR}/src/face_matcher.cpp)
 target_link_libraries(face_matcher ${OpenCV_LIBS} cuda_utils)
 SET_TARGET_PROPERTIES (face_matcher PROPERTIES VERSION "${_app_version_}")
 
+add_library(face_register SHARED ${PROJECT_SOURCE_DIR}/src/face_register.cpp)
+target_link_libraries(face_register ${OpenCV_LIBS} face_matcher)
+SET_TARGET_PROPERTIES (face_register PROPERTIES VERSION "${_app_version_}")
+
 add_executable(face_matcher_test  src/face_matcher_test.cpp)
 target_link_libraries(face_matcher_test  face_matcher 
                                 glog

@@ -17,15 +17,17 @@ FaceMatcher::~FaceMatcher() {
 }
 
 // 带参数的构造函数
-FaceMatcher::FaceMatcher(const cv::cuda::GpuMat& face_feature, const std::vector<std::string>& face_id) {
+FaceMatcher::FaceMatcher(const std::vector<std::string>& face_id, const cv::cuda::GpuMat& face_feature) {
     // 初始化操作
+    face_name_list_ = face_id;
+    face_feature_ = face_feature;
 }
 
 
 // 初始化函数
-int FaceMatcher::Init(const std::string& dataset_path) {
+int FaceMatcher::Init(const std::string& database_path) {
     // 初始化操作
-    return ParseDatasetFile(dataset_path, face_feature_, face_name_list_);
+    return ParseDatasetFile(database_path, face_feature_, face_name_list_);
 }
 
 cv::cuda::GpuMat FaceMatcher::get_scores(const cv::cuda::GpuMat& x, double mean = 1.40, double std = 0.2) {
@@ -96,11 +98,11 @@ cv::cuda::GpuMat FaceMatcher::GetFaceFeature() const
 {
     return face_feature_;
 }
-int FaceMatcher::ParseDatasetFile(const std::string& dataset_path,cv::cuda::GpuMat& face_feature, std::vector<std::string>& face_name_list) const
+int FaceMatcher::ParseDatasetFile(const std::string& database_path,cv::cuda::GpuMat& face_feature, std::vector<std::string>& face_name_list) const
 {
     // 初始化操作
     // 读取 JSON 文件
-    std::ifstream file(dataset_path.c_str());
+    std::ifstream file(database_path.c_str());
     nlohmann::json j;
     file >> j;
 
