@@ -2448,8 +2448,8 @@ namespace GeelyRobotVisionGpu
     {
         public:
             int Init(std::string model_name, bool build_engine, float confidence_threshold=0.4, float nms_threshold=0.4);
-            std::shared_future<cv::cuda::GpuMat> Inference(cv::cuda::GpuMat input_image);
-            std::vector<std::shared_future<cv::cuda::GpuMat>> Inference(std::vector<cv::cuda::GpuMat>& input_images);
+            std::shared_future<cv::cuda::GpuMat> Inference(const cv::cuda::GpuMat& input_image);
+            std::vector<std::shared_future<cv::cuda::GpuMat>> Inference(const std::vector<cv::cuda::GpuMat>& input_images);
             int SetDeviceID(int id);
             int SetBatchSize(int size);
             int SetMaxWorkspace(size_t size);
@@ -2503,13 +2503,13 @@ namespace GeelyRobotVisionGpu
         return 0;
     }
     
-    std::shared_future<cv::cuda::GpuMat> FaceFeature::Inference(cv::cuda::GpuMat input_image)
+    std::shared_future<cv::cuda::GpuMat> FaceFeature::Inference(const cv::cuda::GpuMat& input_image)
     {
         cv::cuda::GpuMat image = input_image;
         return engine_->commit(image);
     }
 
-    std::vector<std::shared_future<cv::cuda::GpuMat>> FaceFeature::Inference(std::vector<cv::cuda::GpuMat>& input_images)
+    std::vector<std::shared_future<cv::cuda::GpuMat>> FaceFeature::Inference(const std::vector<cv::cuda::GpuMat>& input_images)
     {
         std::vector<cv::cuda::GpuMat> images;
         images = input_images;

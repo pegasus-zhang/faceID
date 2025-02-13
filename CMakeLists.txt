@@ -148,6 +148,15 @@ add_library(face_register SHARED ${PROJECT_SOURCE_DIR}/src/face_register.cpp)
 target_link_libraries(face_register ${OpenCV_LIBS} face_matcher)
 SET_TARGET_PROPERTIES (face_register PROPERTIES VERSION "${_app_version_}")
 
+add_library(face_recognizer SHARED ${PROJECT_SOURCE_DIR}/src/face_recognizer.cpp)
+target_link_libraries(face_recognizer ${OpenCV_LIBS} face_register
+                                                    face_matcher
+                                                    face_feature
+                                                    face_alignment
+                                                    scrfd_cuda)
+SET_TARGET_PROPERTIES (face_recognizer PROPERTIES VERSION "${_app_version_}")
+
+
 add_executable(face_matcher_test  src/face_matcher_test.cpp)
 target_link_libraries(face_matcher_test  face_matcher 
                                 glog
@@ -170,7 +179,10 @@ add_executable(face_feature_test src/face_feature_test.cpp)
 target_link_libraries(face_feature_test  face_feature
                                 glog
                                 )       
-                                
+add_executable(face_recognizer_test src/face_recognizer_test.cpp)
+target_link_libraries(face_recognizer_test   face_recognizer 
+                                            glog
+                                )       
 # # ROS-Specific Targets [ADDED]  
 # if(DEFINED ENV{ROS_VERSION})  
 # if($ENV{ROS_VERSION} EQUAL 1) # [ADDED]  

@@ -30,8 +30,8 @@ namespace GeelyRobotVisionGpu
         public:
             virtual ~IFaceFeature(){};
             virtual int Init(std::string model_name, bool build_engine, float confidence_threshold=0.4, float nms_threshold=0.4) = 0;
-            virtual std::shared_future<cv::cuda::GpuMat> Inference(cv::cuda::GpuMat input_image) = 0;
-            virtual std::vector<std::shared_future<cv::cuda::GpuMat>> Inference(std::vector<cv::cuda::GpuMat>& input_image) = 0;
+            virtual std::shared_future<cv::cuda::GpuMat> Inference(const cv::cuda::GpuMat& input_image) = 0;
+            virtual std::vector<std::shared_future<cv::cuda::GpuMat>> Inference(const std::vector<cv::cuda::GpuMat>& input_image) = 0;
             virtual int SetDeviceID(int id) = 0;
             virtual int SetBatchSize(int size) = 0;
             virtual int SetMaxWorkspace(size_t size) = 0;

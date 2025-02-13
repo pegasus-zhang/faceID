@@ -15,6 +15,7 @@ namespace GeelyRobotVisionGpu
             const std::vector<cv::Point2f> &kpts,
             const std::vector<cv::Point2f> &kptsRef,
             const std::string &alignType);
+    std::vector<cv::cuda::GpuMat> FaceAlignment(const cv::cuda::GpuMat &gpuImage, const std::vector<std::vector<cv::Point2f>> &all_kpts);
 }
 
 
