@@ -25,11 +25,11 @@ namespace MatrixRobotVision
             struct Box{
                 float left, top, right, bottom, confidence;
                 // int class_label;
-                std::vector<cv::Point> keypoints;
+                std::vector<cv::Point2f> keypoints;
 
                 Box() = default;
 
-                Box(float left, float top, float right, float bottom, float confidence, const std::vector<cv::Point>& keypoints = {})
+                Box(float left, float top, float right, float bottom, float confidence, const std::vector<cv::Point2f>& keypoints = {})
                 :left(left), top(top), right(right), bottom(bottom), confidence(confidence), keypoints(keypoints){}
             };
 
