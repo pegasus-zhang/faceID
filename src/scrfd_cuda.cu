@@ -2153,17 +2153,17 @@ IScrfd::BoxArray scrfd_postprocess(
                 int count     = min(MAX_IMAGE_BBOX, (int)boxes.size());
                 auto& job     = fetch_jobs[0];
                 job.output = boxes;
-                // 输出结果  
-                for (const auto& box : boxes) {  
-                    std::cout << "Score: " << box.confidence << "\n";  
-                    std::cout << "BBox: [" << box.left << ", " << box.top << ", " << box.right << ", " << box.bottom << "]\n";  
-                    std::cout << "Keypoints: ";  
-                    // image_based_boxes.emplace_back(det.bbox[0], det.bbox[1], det.bbox[2], det.bbox[3], det.score, 0);
-                    for (const auto& kp : box.keypoints) {  
-                        std::cout << "[" << kp.x << ", " << kp.y << "] ";  
-                    }  
-                    std::cout << "\n";  
-                }  
+                // // 输出结果  
+                // for (const auto& box : boxes) {  
+                //     std::cout << "Score: " << box.confidence << "\n";  
+                //     std::cout << "BBox: [" << box.left << ", " << box.top << ", " << box.right << ", " << box.bottom << "]\n";  
+                //     std::cout << "Keypoints: ";  
+                //     // image_based_boxes.emplace_back(det.bbox[0], det.bbox[1], det.bbox[2], det.bbox[3], det.score, 0);
+                //     for (const auto& kp : box.keypoints) {  
+                //         std::cout << "[" << kp.x << ", " << kp.y << "] ";  
+                //     }  
+                //     std::cout << "\n";  
+                // }  
             ///////////////////zzk/////////////////////
 
                 // for(int ibatch = 0; ibatch < infer_batch_size; ++ibatch){
