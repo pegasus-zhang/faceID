@@ -9,7 +9,7 @@
 // {
 //     cv::Mat image = cv::imread("../data/bus.png");
 //     std::shared_ptr<IScrfd> yolo_engine = IScrfdManager::create();
-//     std::string yolo_onnx_file = "../weights/yolov8n.onnx";
+//     std::string yolo_onnx_file = "../weights/scrfdn.onnx";
 //     yolo_engine->Init(yolo_onnx_file,false);
 //     //warm up
 //     yolo_engine->Inference(image).get();
@@ -39,7 +39,7 @@
 //     cv::Mat image = cv::imread("../data/bus.png");
 
 //     std::shared_ptr<IScrfd> yolo_engine = IScrfdManager::create();
-//     std::string yolo_onnx_file = "../weights/yolov8n.onnx";
+//     std::string yolo_onnx_file = "../weights/scrfdn.onnx";
 //     int batch_size = 4;
 //     yolo_engine->SetBatchSize(batch_size);
 //     yolo_engine->Init(yolo_onnx_file,false);

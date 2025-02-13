@@ -22,7 +22,7 @@ def load_tensor(file):
     return np.frombuffer(binary_data, np_dtype, offset=(ndims + 3) * 4).reshape(*dims)
 
 if __name__ == '__main__':
-    input_tensor = load_tensor('/home/jiangziben/projects/yolov8/example-yolov8/workspace/input.in')    
+    input_tensor = load_tensor('/home/jiangziben/projects/scrfd/example-scrfd/workspace/input.in')    
     # print('input_tensor: ',input_tensor)
     # print('input_tensor.shape: ',input_tensor.shape)
 
@@ -33,6 +33,6 @@ if __name__ == '__main__':
     # cv2.imshow("test",image.astype('uint8'))
     # cv2.waitKey(0) 
 
-    output_tensor = load_tensor('/home/jiangziben/projects/yolov8/example-yolov8/workspace/output.out')    
+    output_tensor = load_tensor('/home/jiangziben/projects/scrfd/example-scrfd/workspace/output.out')    
     print('output_tensor: ',output_tensor)
     # print('output_tensor.shape: ',output_tensor.shape)

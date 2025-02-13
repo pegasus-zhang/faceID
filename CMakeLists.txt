@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.10)
-project(yolo)
+project(faceID)
 
 option(GTEST_OPTION "build gtest samples" OFF)
 
@@ -43,37 +43,6 @@ message(STATUS "${_app_version_}")
 # link_directories(${MXT_CONTROL_SDK_LIB_PATH} ${MXT_CONTROL_SDK_LIB_SYSTEM_PATH})
 include_directories(include)
 link_directories(lib)
-
-
-# Detect ROS Version  
-# if(DEFINED ENV{ROS_VERSION})  
-#     if($ENV{ROS_VERSION} EQUAL 1)  
-#         message(STATUS "Building for ROS1")  
-#         find_package(catkin REQUIRED COMPONENTS  
-#             roscpp  
-#             std_msgs  
-#         )  
-#         catkin_package(  
-#             INCLUDE_DIRS include  
-#             LIBRARIES ${PROJECT_NAME}  
-#             CATKIN_DEPENDS roscpp std_msgs  
-#         )  
-#         include_directories(${catkin_INCLUDE_DIRS})  
-#         add_definitions(-DUSING_ROS1)  
-#     elseif($ENV{ROS_VERSION} EQUAL 2)  
-#         message(STATUS "Building for ROS2")  
-#         find_package(ament_cmake REQUIRED)  
-#         find_package(rclcpp REQUIRED)  
-#         find_package(std_msgs REQUIRED)  
-#         include_directories(${rclcpp_INCLUDE_DIRS} ${std_msgs_INCLUDE_DIRS})  
-#         add_definitions(-DUSING_ROS2)  
-#     else()  
-#         message(FATAL_ERROR "Unsupported ROS version: $ENV{ROS_VERSION}")  
-#     endif()  
-# else()  
-#     message(STATUS "No ROS environment detected. Building without ROS support.")  
-# endif()  
-
 
 # 如果启用了 ROS1  
 if(ENABLE_ROS1)  
@@ -150,25 +119,25 @@ endif()
 # set(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} -std=c++11 -Wall -O0 -Wfatal-errors -pthread -w -g")
 # set(CUDA_NVCC_FLAGS "${CUDA_NVCC_FLAGS} -std=c++11 -O0 -Xcompiler -fPIC -g -w ${CUDA_GEN_CODE}")
 
-cuda_add_library(yolov8 SHARED ${PROJECT_SOURCE_DIR}/src/simple_yolo.cu)
-target_link_libraries(yolov8 ${TRT_LIBS} ${OpenCV_LIBS} )
-SET_TARGET_PROPERTIES (yolov8 PROPERTIES VERSION "${_app_version_}")
+cuda_add_library(scrfd SHARED ${PROJECT_SOURCE_DIR}/src/scrfd.cu)
+target_link_libraries(scrfd ${TRT_LIBS} ${OpenCV_LIBS} )
+SET_TARGET_PROPERTIES (scrfd PROPERTIES VERSION "${_app_version_}")
 
 
-cuda_add_library(yolov8_cuda SHARED ${PROJECT_SOURCE_DIR}/src/simple_yolo_cuda.cu)
-target_link_libraries(yolov8_cuda ${TRT_LIBS} ${OpenCV_LIBS} ${catkin_LIBRARIES})
-SET_TARGET_PROPERTIES (yolov8_cuda PROPERTIES VERSION "${_app_version_}")
+cuda_add_library(scrfd_cuda SHARED ${PROJECT_SOURCE_DIR}/src/scrfd_cuda.cu)
+target_link_libraries(scrfd_cuda ${TRT_LIBS} ${OpenCV_LIBS} ${catkin_LIBRARIES})
+SET_TARGET_PROPERTIES (scrfd_cuda PROPERTIES VERSION "${_app_version_}")
 
 
-add_executable(yolo_test src/yolo_test.cpp)
-target_link_libraries(yolo_test  yolov8
-                                ${OpenCV_LIBS}
-                                jsoncpp
-                                glog 
-                                )
+# add_executable(yolo_test src/yolo_test.cpp)
+# target_link_libraries(yolo_test  scrfd
+#                                 ${OpenCV_LIBS}
+#                                 jsoncpp
+#                                 glog 
+#                                 )
 
-add_executable(yolo_gpu_test src/yolo_gpu_test.cpp)
-target_link_libraries(yolo_gpu_test  yolov8_cuda
+add_executable(faceID src/faceID.cpp)
+target_link_libraries(faceID  scrfd_cuda
                                 jsoncpp
                                 glog
                                 pthread
@@ -178,11 +147,11 @@ target_link_libraries(yolo_gpu_test  yolov8_cuda
 # if(DEFINED ENV{ROS_VERSION})  
 # if($ENV{ROS_VERSION} EQUAL 1) # [ADDED]  
 #     add_executable(yolo_ros1_node src/yolo_ros1_node.cpp) # [ADDED]  
-#     target_link_libraries(yolo_ros1_node ${catkin_LIBRARIES} yolov8) # [ADDED]  
+#     target_link_libraries(yolo_ros1_node ${catkin_LIBRARIES} scrfd) # [ADDED]  
 #     add_dependencies(yolo_ros1_node ${catkin_EXPORTED_TARGETS}) # [ADDED]  
 # elseif($ENV{ROS_VERSION} EQUAL 2) # [ADDED]  
 #     add_executable(yolo_ros2_node src/yolo_ros2_node.cpp) # [ADDED]  
-#     target_link_libraries(yolo_ros2_node rclcpp yolov8) # [ADDED]  
+#     target_link_libraries(yolo_ros2_node rclcpp scrfd) # [ADDED]  
 #     ament_target_dependencies(yolo_ros2_node rclcpp std_msgs) # [ADDED]  
 # endif()  
 # endif() 
@@ -196,10 +165,10 @@ if(GTEST_OPTION)
     Message(STATUS "--------------------------------------")
     include_directories(${GTEST_INCLUDE_DIRS})
     add_executable(sample1_unittest samples/sample1_unittest.cpp)
-    target_link_libraries(sample1_unittest gtest gtest_main pthread yolov8_cuda ${OpenCV_LIBS})
+    target_link_libraries(sample1_unittest gtest gtest_main pthread scrfd_cuda ${OpenCV_LIBS})
 
     add_executable(sample2_unittest samples/sample2_unittest.cpp)
-    target_link_libraries(sample2_unittest gtest gtest_main pthread yolov8 ${OpenCV_LIBS})
+    target_link_libraries(sample2_unittest gtest gtest_main pthread scrfd ${OpenCV_LIBS})
     
     include(GoogleTest)
     gtest_discover_tests(sample1_unittest sample2_unittest)
@@ -212,27 +181,27 @@ IF(DEFINED _install_root_path_ AND NOT "${_install_root_path_}" STREQUAL "")
     # 宏定义不为空的处理逻辑
     set(CMAKE_INSTALL_PREFIX ${_install_root_path_})
 ELSE()
-    # 宏定义为空的处理逻辑yolov8
+    # 宏定义为空的处理逻辑scrfd
     set(CMAKE_INSTALL_PREFIX "/opt/opt_control/")
 ENDIF()
 if(GTEST_OPTION)
-    install(TARGETS sample1_unittest sample2_unittest DESTINATION bin/yolov8)
+    install(TARGETS sample1_unittest sample2_unittest DESTINATION bin/scrfd)
 endif()
-install(TARGETS yolov8_cuda yolov8 DESTINATION lib/yolov8)
-install(FILES include/simple_yolo_cuda.h include/simple_yolo.h DESTINATION include/yolov8)
+install(TARGETS scrfd_cuda scrfd DESTINATION lib/scrfd)
+install(FILES include/scrfd_cuda.h include/scrfd.h DESTINATION include/scrfd)
 
 #cmake install
 install(FILES
-        cmake/yolov8Config.cmake
-        cmake/yolov8ConfigVersion.cmake
-        DESTINATION lib/cmake/yolov8)
+        cmake/scrfdConfig.cmake
+        cmake/scrfdConfigVersion.cmake
+        DESTINATION lib/cmake/scrfd)
 
 # Create an uninstall target (optional)
 add_custom_target(uninstall
-    COMMAND ${CMAKE_COMMAND} -E remove_directory "${CMAKE_INSTALL_PREFIX}/lib/yolov8"
-    COMMAND ${CMAKE_COMMAND} -E remove_directory "${CMAKE_INSTALL_PREFIX}/include/yolov8"
-    COMMAND ${CMAKE_COMMAND} -E remove_directory "${CMAKE_INSTALL_PREFIX}/bin/yolov8"
-    COMMAND ${CMAKE_COMMAND} -E remove_directory "${CMAKE_INSTALL_PREFIX}/lib/cmake/yolov8"
+    COMMAND ${CMAKE_COMMAND} -E remove_directory "${CMAKE_INSTALL_PREFIX}/lib/scrfd"
+    COMMAND ${CMAKE_COMMAND} -E remove_directory "${CMAKE_INSTALL_PREFIX}/include/scrfd"
+    COMMAND ${CMAKE_COMMAND} -E remove_directory "${CMAKE_INSTALL_PREFIX}/bin/scrfd"
+    COMMAND ${CMAKE_COMMAND} -E remove_directory "${CMAKE_INSTALL_PREFIX}/lib/cmake/scrfd"
     COMMENT "Uninstalling ScrfdV8"
 )
 
