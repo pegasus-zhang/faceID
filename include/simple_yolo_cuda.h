@@ -25,7 +25,7 @@
 
 namespace MatrixRobotVisionGpu
 {
-    class IYolo
+    class IScrfd
     {
         public:
             enum class Mode : int {
@@ -48,7 +48,7 @@ namespace MatrixRobotVisionGpu
             typedef std::vector<Box> BoxArray;
 
         public:
-            virtual ~IYolo(){};
+            virtual ~IScrfd(){};
             virtual int Init(std::string model_name, bool build_engine, float confidence_threshold=0.4, float nms_threshold=0.4) = 0;
             virtual std::shared_future<BoxArray> Inference(cv::cuda::GpuMat input_image) = 0;
             virtual std::vector<std::shared_future<BoxArray>> Inference(std::vector<cv::cuda::GpuMat>& input_image) = 0;
@@ -60,10 +60,10 @@ namespace MatrixRobotVisionGpu
             virtual int SetCalibrationCachePath(std::string path) = 0;            
     };
 
-    class IYoloManager
+    class IScrfdManager
     {
         public:
-           static std::shared_ptr<IYolo> create(); 
+           static std::shared_ptr<IScrfd> create(); 
     };
 
         // 定义一个抽象基类作为适配器接口  
@@ -120,7 +120,7 @@ namespace MatrixRobotVisionGpu
     };  
 
     // ROS1 的适配器实现  
-    // #ifdef ROS_ENABLE  
+    #ifdef ROS_ENABLE  
     class Ros1Adapter : public RosAdapter {  
     public:  
         using CompressedImage = sensor_msgs::CompressedImage;  
@@ -156,7 +156,7 @@ namespace MatrixRobotVisionGpu
         ros::Subscriber sub_;  
         FifoQueue<CompressedImage> fifo_queue_{5};  
     };  
-    // #endif  
+    #endif  
 
     // ROS2 的适配器实现  
     #ifdef ROS2_ENABLE  

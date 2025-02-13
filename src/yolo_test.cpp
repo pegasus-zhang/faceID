@@ -49,20 +49,20 @@ bool exists(const std::string& path){
 
 }
 
-const char* mode_string(IYolo::Mode type) {
+const char* mode_string(IScrfd::Mode type) {
     switch (type) {
-    case IYolo::Mode::FP32:
+    case IScrfd::Mode::FP32:
         return "fp32";
-    case IYolo::Mode::FP16:
+    case IScrfd::Mode::FP16:
         return "fp16";
-    case IYolo::Mode::INT8:
+    case IScrfd::Mode::INT8:
         return "int8";
     default:
         return "UnknowCompileMode";
     }
 }
 
-IYolo::BoxArray AddROI(IYolo::BoxArray boxes, cv::Rect2i roi)
+IScrfd::BoxArray AddROI(IScrfd::BoxArray boxes, cv::Rect2i roi)
 {
     for(auto& obj : boxes)
     {
@@ -124,14 +124,14 @@ int main(int argc,char* argv[])
     }
     int start_idx = cmd_parser.get<int>("start_idx");
     bool pause_flag = cmd_parser.exist("pause");
-    IYolo::Mode inference_mode = IYolo::Mode::FP32;
+    IScrfd::Mode inference_mode = IScrfd::Mode::FP32;
     if(cmd_parser.exist("fp16"))
     {
-        inference_mode = IYolo::Mode::FP16;
+        inference_mode = IScrfd::Mode::FP16;
     }
     if(cmd_parser.exist("int8"))
     {
-        inference_mode = IYolo::Mode::INT8;
+        inference_mode = IScrfd::Mode::INT8;
     }
     const char * mode_name = mode_string(inference_mode);
     int deviceid = cmd_parser.get<int>("device");
@@ -177,7 +177,7 @@ int main(int argc,char* argv[])
     {
         show_flag = true;
     }
-    std::shared_ptr<IYolo> engine = IYoloManager::create();
+    std::shared_ptr<IScrfd> engine = IScrfdManager::create();
     engine->SetPrecision(inference_mode);
     engine->SetDeviceID(deviceid);
     engine->SetBatchSize(test_batch_size);
@@ -203,7 +203,7 @@ int main(int argc,char* argv[])
         int frame_index = 0;
         while(capture.read(image))
         {
-            std::shared_future<IYolo::BoxArray> boxes_future;
+            std::shared_future<IScrfd::BoxArray> boxes_future;
             auto begin_timer = timestamp_now_float();
             
             if(cmd_parser.exist("roi"))
@@ -281,7 +281,7 @@ int main(int argc,char* argv[])
                 std::cout<<"No Picture found: "<< files[i] << std::endl;
                 return -1;
             }
-            std::shared_future<IYolo::BoxArray> boxes_future;
+            std::shared_future<IScrfd::BoxArray> boxes_future;
             auto begin_timer = timestamp_now_float();
             if(cmd_parser.exist("roi"))
             {

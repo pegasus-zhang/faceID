@@ -13,7 +13,7 @@
 
 namespace MatrixRobotVision
 {
-    class IYolo
+    class IScrfd
     {
         public:
             enum class Mode : int {
@@ -36,7 +36,7 @@ namespace MatrixRobotVision
             typedef std::vector<Box> BoxArray;
 
         public:
-            virtual ~IYolo(){};
+            virtual ~IScrfd(){};
             virtual int Init(std::string model_name, bool build_engine, float confidence_threshold=0.4, float nms_threshold=0.4) = 0;
             virtual std::shared_future<BoxArray> Inference(cv::Mat input_image) = 0;
             virtual std::vector<std::shared_future<BoxArray>> Inference(std::vector<cv::Mat>& input_image) = 0;
@@ -48,10 +48,10 @@ namespace MatrixRobotVision
             virtual int SetCalibrationCachePath(std::string path) = 0;            
     };
 
-    class IYoloManager
+    class IScrfdManager
     {
         public:
-           static std::shared_ptr<IYolo> create(); 
+           static std::shared_ptr<IScrfd> create(); 
     };
 
 }; // namespace MatrixRobotVision

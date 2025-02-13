@@ -75,8 +75,8 @@ namespace MatrixRobotVisionGpu
     class Infer
     {
     public:
-        virtual std::shared_future<IYolo::BoxArray> commit(const cv::cuda::GpuMat& image) = 0;
-        virtual std::vector<std::shared_future<IYolo::BoxArray>> commits(const std::vector<cv::cuda::GpuMat>& images) = 0;
+        virtual std::shared_future<IScrfd::BoxArray> commit(const cv::cuda::GpuMat& image) = 0;
+        virtual std::vector<std::shared_future<IScrfd::BoxArray>> commits(const std::vector<cv::cuda::GpuMat>& images) = 0;
     };
 
 
@@ -94,7 +94,7 @@ namespace MatrixRobotVisionGpu
      */
     // 1GB = 1<<30
     bool compile(
-        IYolo::Mode mode, 
+        IScrfd::Mode mode, 
         unsigned int max_batch_size,
         const string& source_onnx,
         const string& saveto,
@@ -1828,8 +1828,8 @@ namespace MatrixRobotVisionGpu
     };
 
 
-    ///////////////////////////////////class YoloTRTInferImpl//////////////////////////////////////
-    /* Yolo的具体实现
+    ///////////////////////////////////class ScrfdTRTInferImpl//////////////////////////////////////
+    /* Scrfd的具体实现
         通过上述类的特性，实现预处理的计算重叠、异步垮线程调用，最终拼接为多个图为一个batch进行推理。最大化的利用
         显卡性能，实现高性能高可用好用的yolo推理
     */
@@ -1861,14 +1861,14 @@ namespace MatrixRobotVisionGpu
     using ThreadSafedAsyncInferImpl = ThreadSafedAsyncInfer
     <
         cv::cuda::GpuMat,                    // input
-        IYolo::BoxArray,                   // output
+        IScrfd::BoxArray,                   // output
         tuple<string, int>,         // start param
         AffineMatrix                // additional
     >;
 
 
     // 非极大值抑制（NMS）函数  
-std::vector<int> nms(const IYolo::BoxArray& boxes, float iou_threshold) {  
+std::vector<int> nms(const IScrfd::BoxArray& boxes, float iou_threshold) {  
     std::vector<int> keep;  
     std::vector<bool> suppressed(boxes.size(), false);  
 
@@ -1952,7 +1952,7 @@ std::vector<std::vector<std::vector<float>>> generate_all_anchors(
 }  
 
 // SCRFD 后处理函数  
-IYolo::BoxArray scrfd_postprocess(  
+IScrfd::BoxArray scrfd_postprocess(  
     const std::vector<float*>& outputs, // 模型输出（CPU 内存）  
     const std::vector<std::vector<std::vector<float>>>& anchors, // 所有特征层的 anchor  
     const std::vector<int>& strides,               // FPN stride  
@@ -1960,7 +1960,7 @@ IYolo::BoxArray scrfd_postprocess(
     int image_width, int image_height,             // 原图尺寸  
     float score_threshold, float iou_threshold, float* d2i) {  // 阈值  
     // std::vector<Detection> detections;  
-    IYolo::BoxArray boxes;
+    IScrfd::BoxArray boxes;
 
     for (size_t layer = 0; layer < strides.size(); ++layer) {  
         const float* scores = outputs[layer * 3 + 0];  // 置信度  
@@ -2035,7 +2035,7 @@ IYolo::BoxArray scrfd_postprocess(
     std::vector<int> keep = nms(boxes, iou_threshold);  
 
     // 返回最终结果  
-    IYolo::BoxArray final_boxes;  
+    IScrfd::BoxArray final_boxes;  
     for (int idx : keep) {  
         final_boxes.push_back(boxes[idx]);  
     }  
@@ -2043,11 +2043,11 @@ IYolo::BoxArray scrfd_postprocess(
     return final_boxes;  
 }  
 
-    class YoloTRTInferImpl : public Infer, public ThreadSafedAsyncInferImpl{
+    class ScrfdTRTInferImpl : public Infer, public ThreadSafedAsyncInferImpl{
     public:
 
         /** 要求在TRTInferImpl里面执行stop，而不是在基类执行stop **/
-        virtual ~YoloTRTInferImpl(){
+        virtual ~ScrfdTRTInferImpl(){
             stop();
         }
 
@@ -2146,7 +2146,7 @@ IYolo::BoxArray scrfd_postprocess(
                 float iou_threshold = 0.3;  
 
                 // 后处理  
-                IYolo::BoxArray boxes = scrfd_postprocess(  
+                IScrfd::BoxArray boxes = scrfd_postprocess(  
                     cpu_outputs, anchors, strides, input_width_, input_height_, image_width_, image_height_, score_threshold, iou_threshold, fetch_jobs[0].additional.d2i);  
 
                 
@@ -2260,11 +2260,11 @@ IYolo::BoxArray scrfd_postprocess(
             return true;
         }
 
-        virtual std::vector<std::shared_future<IYolo::BoxArray>> commits(const std::vector<cv::cuda::GpuMat>& images)
+        virtual std::vector<std::shared_future<IScrfd::BoxArray>> commits(const std::vector<cv::cuda::GpuMat>& images)
         {
             return ThreadSafedAsyncInferImpl::commits(images);
         }
-        virtual std::shared_future<IYolo::BoxArray> commit(const cv::cuda::GpuMat& image) override
+        virtual std::shared_future<IScrfd::BoxArray> commit(const cv::cuda::GpuMat& image) override
         {
             return ThreadSafedAsyncInferImpl::commit(image);
         }
@@ -2316,7 +2316,7 @@ IYolo::BoxArray scrfd_postprocess(
     }
 
     shared_ptr<Infer> create_infer(const string& engine_file, int gpuid, float confidence_threshold, float nms_threshold){
-        shared_ptr<YoloTRTInferImpl> instance(new YoloTRTInferImpl());
+        shared_ptr<ScrfdTRTInferImpl> instance(new ScrfdTRTInferImpl());
         if(!instance->startup(engine_file, gpuid, confidence_threshold, nms_threshold)){
             instance.reset();
         }
@@ -2325,13 +2325,13 @@ IYolo::BoxArray scrfd_postprocess(
 
     //////////////////////////////////////Compile Model/////////////////////////////////////////////////////////////
 
-    const char* mode_string(IYolo::Mode type) {
+    const char* mode_string(IScrfd::Mode type) {
         switch (type) {
-        case IYolo::Mode::FP32:
+        case IScrfd::Mode::FP32:
             return "fp32";
-        case IYolo::Mode::FP16:
+        case IScrfd::Mode::FP16:
             return "fp16";
-        case IYolo::Mode::INT8:
+        case IScrfd::Mode::INT8:
             return "int8";
         default:
             return "UnknowCompileMode";
@@ -2429,7 +2429,7 @@ IYolo::BoxArray scrfd_postprocess(
     };
 
     bool compile(
-        IYolo::Mode mode, 
+        IScrfd::Mode mode, 
         unsigned int max_batch_size,
         const string& source_onnx,
         const string& saveto,
@@ -2458,7 +2458,7 @@ IYolo::BoxArray scrfd_postprocess(
             tensor->synchronize();
         };
 
-        if (mode == IYolo::Mode::INT8) {
+        if (mode == IScrfd::Mode::INT8) {
             if (!int8_entropy_calibrator_cache_file.empty()) {
                 if (exists(int8_entropy_calibrator_cache_file)) {
                     entropyCalibratorData = load_file(int8_entropy_calibrator_cache_file);
@@ -2505,13 +2505,13 @@ IYolo::BoxArray scrfd_postprocess(
         }
 
         shared_ptr<IBuilderConfig> config(builder->createBuilderConfig(), destroy_nvidia_pointer<IBuilderConfig>);
-        if (mode == IYolo::Mode::FP16) {
+        if (mode == IScrfd::Mode::FP16) {
             if (!builder->platformHasFastFp16()) {
                 INFOW("Platform not have fast fp16 support");
             }
             config->setFlag(BuilderFlag::kFP16);
         }
-        else if (mode == IYolo::Mode::INT8) {
+        else if (mode == IScrfd::Mode::INT8) {
             if (!builder->platformHasFastInt8()) {
                 INFOW("Platform not have fast int8 support");
             }
@@ -2539,7 +2539,7 @@ IYolo::BoxArray scrfd_postprocess(
         auto inputDims = inputTensor->getDimensions();
 
         shared_ptr<Int8EntropyCalibrator> int8Calibrator;
-        if (mode == IYolo::Mode::INT8) {
+        if (mode == IScrfd::Mode::INT8) {
             auto calibratorDims = inputDims;
             calibratorDims.d[0] = max_batch_size;
 
@@ -2608,7 +2608,7 @@ IYolo::BoxArray scrfd_postprocess(
             return false;
         }
 
-        if (mode == IYolo::Mode::INT8) {
+        if (mode == IScrfd::Mode::INT8) {
             if (!hasEntropyCalibrator) {
                 if (!int8_entropy_calibrator_cache_file.empty()) {
                     struct stat s;
@@ -2638,29 +2638,29 @@ IYolo::BoxArray scrfd_postprocess(
         return save_file(saveto, seridata->data(), seridata->size());
     }
 
-    class Yolo: public IYolo
+    class Scrfd: public IScrfd
     {
         public:
             int Init(std::string model_name, bool build_engine, float confidence_threshold=0.4, float nms_threshold=0.4);
-            std::shared_future<IYolo::BoxArray> Inference(cv::cuda::GpuMat input_image);
-            std::vector<std::shared_future<IYolo::BoxArray>> Inference(std::vector<cv::cuda::GpuMat>& input_images);
+            std::shared_future<IScrfd::BoxArray> Inference(cv::cuda::GpuMat input_image);
+            std::vector<std::shared_future<IScrfd::BoxArray>> Inference(std::vector<cv::cuda::GpuMat>& input_images);
             int SetDeviceID(int id);
             int SetBatchSize(int size);
             int SetMaxWorkspace(size_t size);
-            int SetPrecision(IYolo::Mode mode);
+            int SetPrecision(IScrfd::Mode mode);
             int SetCalibrationPath(std::string path);
             int SetCalibrationCachePath(std::string path);
         private:
             int device_id_ = 0;
             size_t max_workspace_size_ = 1<<30;
             int batch_size_ = 1;
-            IYolo::Mode precision_ = IYolo::Mode::FP16;
+            IScrfd::Mode precision_ = IScrfd::Mode::FP16;
             std::string calibration_path_="";
             std::string int8_entropy_calibrator_cache_file_="";
             std::shared_ptr<Infer> engine_ = nullptr;
     };
 
-    int Yolo::Init(std::string onnx_file, bool build_engine, float confidence_threshold, float nms_threshold)
+    int Scrfd::Init(std::string onnx_file, bool build_engine, float confidence_threshold, float nms_threshold)
     {
         #ifdef __app_version__
             std::string strVersion = __app_version__;
@@ -2697,53 +2697,53 @@ IYolo::BoxArray scrfd_postprocess(
         return 0;
     }
     
-    std::shared_future<IYolo::BoxArray> Yolo::Inference(cv::cuda::GpuMat input_image)
+    std::shared_future<IScrfd::BoxArray> Scrfd::Inference(cv::cuda::GpuMat input_image)
     {
         cv::cuda::GpuMat image = input_image;
         return engine_->commit(image);
     }
 
-    std::vector<std::shared_future<IYolo::BoxArray>> Yolo::Inference(std::vector<cv::cuda::GpuMat>& input_images)
+    std::vector<std::shared_future<IScrfd::BoxArray>> Scrfd::Inference(std::vector<cv::cuda::GpuMat>& input_images)
     {
         std::vector<cv::cuda::GpuMat> images;
         images = input_images;
         return engine_->commits(images);
     }
 
-    int Yolo::SetDeviceID(int id)
+    int Scrfd::SetDeviceID(int id)
     {
         device_id_ = id;
         return 0;
     }
-    int Yolo::SetBatchSize(int size)
+    int Scrfd::SetBatchSize(int size)
     {
         batch_size_ = size;
         return 0;
     }
-    int Yolo::SetMaxWorkspace(size_t size)
+    int Scrfd::SetMaxWorkspace(size_t size)
     {
         max_workspace_size_ = size ;
         return 0;
     }
-    int Yolo::SetPrecision(IYolo::Mode mode)
+    int Scrfd::SetPrecision(IScrfd::Mode mode)
     {
         precision_ = mode;
         return 0;
     }
-    int Yolo::SetCalibrationPath(std::string path)
+    int Scrfd::SetCalibrationPath(std::string path)
     {
         calibration_path_ = path;
         return 0;
     }
-    int Yolo::SetCalibrationCachePath(std::string path)
+    int Scrfd::SetCalibrationCachePath(std::string path)
     {
         int8_entropy_calibrator_cache_file_ = path;
         return 0;
     }
 
-    std::shared_ptr<IYolo> IYoloManager::create()
+    std::shared_ptr<IScrfd> IScrfdManager::create()
     {
-        std::shared_ptr<IYolo> yolov8_infer_ptr(new Yolo());
+        std::shared_ptr<IScrfd> yolov8_infer_ptr(new Scrfd());
         return yolov8_infer_ptr;
     }
   

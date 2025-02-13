@@ -1,5 +1,5 @@
-# get_filename_component(Yolov5_CONFIG_PATH "${CMAKE_CURRENT_LIST_DIR}" REALPATH)
-# get_filename_component(Yolov5_INSTALL_PATH "${_install_root_path_}" REALPATH)
+# get_filename_component(Scrfdv5_CONFIG_PATH "${CMAKE_CURRENT_LIST_DIR}" REALPATH)
+# get_filename_component(Scrfdv5_INSTALL_PATH "${_install_root_path_}" REALPATH)
 
 set(MXT_CONTROL_SDK_LIB_SYSTEM_PATH /opt/opt_control)
 
@@ -49,5 +49,5 @@ if(With_TRT)
 endif()
 # TensorRT
 
-set(Yolov8_INCLUDE_DIRS ${MXT_CONTROL_SDK_LIB_SYSTEM_PATH}/include/yolov8/)
-set(Yolov8_LIBS ${MXT_CONTROL_SDK_LIB_SYSTEM_PATH}/lib/yolov8/libyolov8.so ${MXT_CONTROL_SDK_LIB_SYSTEM_PATH}/lib/yolov8/libyolov8_cuda.so  ${TRT_LIBS} ${OpenCV_LIBS} )
+set(Scrfdv8_INCLUDE_DIRS ${MXT_CONTROL_SDK_LIB_SYSTEM_PATH}/include/yolov8/)
+set(Scrfdv8_LIBS ${MXT_CONTROL_SDK_LIB_SYSTEM_PATH}/lib/yolov8/libyolov8.so ${MXT_CONTROL_SDK_LIB_SYSTEM_PATH}/lib/yolov8/libyolov8_cuda.so  ${TRT_LIBS} ${OpenCV_LIBS} )

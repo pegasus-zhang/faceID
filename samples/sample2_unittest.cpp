@@ -5,17 +5,17 @@
 
 // using namespace MatrixRobotVision;
 
-// TEST(YoloTest, SingleBatch)
+// TEST(ScrfdTest, SingleBatch)
 // {
 //     cv::Mat image = cv::imread("../data/bus.png");
-//     std::shared_ptr<IYolo> yolo_engine = IYoloManager::create();
+//     std::shared_ptr<IScrfd> yolo_engine = IScrfdManager::create();
 //     std::string yolo_onnx_file = "../weights/yolov8n.onnx";
 //     yolo_engine->Init(yolo_onnx_file,false);
 //     //warm up
 //     yolo_engine->Inference(image).get();
 //     //推理
-//     std::shared_future<IYolo::BoxArray> boxes_future;
-//     IYolo::BoxArray boxes;
+//     std::shared_future<IScrfd::BoxArray> boxes_future;
+//     IScrfd::BoxArray boxes;
 //     auto start = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now().time_since_epoch()).count() / 1000.0;
 //     boxes_future = yolo_engine->Inference(image);
 //     boxes = boxes_future.get();
@@ -34,11 +34,11 @@
 // }
 
 
-// TEST(YoloTest, MultiBatch)
+// TEST(ScrfdTest, MultiBatch)
 // {
 //     cv::Mat image = cv::imread("../data/bus.png");
 
-//     std::shared_ptr<IYolo> yolo_engine = IYoloManager::create();
+//     std::shared_ptr<IScrfd> yolo_engine = IScrfdManager::create();
 //     std::string yolo_onnx_file = "../weights/yolov8n.onnx";
 //     int batch_size = 4;
 //     yolo_engine->SetBatchSize(batch_size);
@@ -52,8 +52,8 @@
 //     {
 //         images[i] = image;
 //     }
-//     std::vector<std::shared_future<IYolo::BoxArray>> boxes_future(batch_size);
-//     std::vector<IYolo::BoxArray> boxes(batch_size);
+//     std::vector<std::shared_future<IScrfd::BoxArray>> boxes_future(batch_size);
+//     std::vector<IScrfd::BoxArray> boxes(batch_size);
 //     auto start = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now().time_since_epoch()).count() / 1000.0;
 //     boxes_future = yolo_engine->Inference(images);
 //     for(int i = 0;i<boxes_future.size();i++)

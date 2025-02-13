@@ -5,20 +5,20 @@
 
 using namespace MatrixRobotVisionGpu;
 
-TEST(YoloTest, SingleBatchGpu)
+TEST(ScrfdTest, SingleBatchGpu)
 {
     cv::Mat image = cv::imread("../data/bus.jpg");
     cv::cuda::GpuMat gpu_image;
     gpu_image.upload(image);
 
-    std::shared_ptr<IYolo> yolo_engine = IYoloManager::create();
+    std::shared_ptr<IScrfd> yolo_engine = IScrfdManager::create();
     std::string yolo_onnx_file = "../weights/yolov8n.onnx";
     yolo_engine->Init(yolo_onnx_file,false);
     //warm up
     yolo_engine->Inference(gpu_image).get();
 
-    std::shared_future<IYolo::BoxArray> boxes_future;
-    IYolo::BoxArray boxes;
+    std::shared_future<IScrfd::BoxArray> boxes_future;
+    IScrfd::BoxArray boxes;
     //推理
     auto start = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now().time_since_epoch()).count() / 1000.0;
     boxes_future = yolo_engine->Inference(gpu_image);
@@ -38,13 +38,13 @@ TEST(YoloTest, SingleBatchGpu)
 }
 
 
-TEST(YoloTest, MultiBatchGpu)
+TEST(ScrfdTest, MultiBatchGpu)
 {
     cv::Mat image = cv::imread("../data/bus.jpg");
     cv::cuda::GpuMat gpu_image;
     gpu_image.upload(image);
 
-    std::shared_ptr<IYolo> yolo_engine = IYoloManager::create();
+    std::shared_ptr<IScrfd> yolo_engine = IScrfdManager::create();
     std::string yolo_onnx_file = "../weights/yolov8n.onnx";
     int batch_size = 4;
     yolo_engine->SetBatchSize(batch_size);
@@ -57,8 +57,8 @@ TEST(YoloTest, MultiBatchGpu)
     {
         images[i] = gpu_image;
     }
-    std::vector<std::shared_future<IYolo::BoxArray>> boxes_future(batch_size);
-    std::vector<IYolo::BoxArray> boxes(batch_size);
+    std::vector<std::shared_future<IScrfd::BoxArray>> boxes_future(batch_size);
+    std::vector<IScrfd::BoxArray> boxes(batch_size);
     // 多batch推理
     auto start = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now().time_since_epoch()).count() / 1000.0;
     boxes_future = yolo_engine->Inference(images);

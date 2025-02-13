@@ -233,7 +233,7 @@ add_custom_target(uninstall
     COMMAND ${CMAKE_COMMAND} -E remove_directory "${CMAKE_INSTALL_PREFIX}/include/yolov8"
     COMMAND ${CMAKE_COMMAND} -E remove_directory "${CMAKE_INSTALL_PREFIX}/bin/yolov8"
     COMMAND ${CMAKE_COMMAND} -E remove_directory "${CMAKE_INSTALL_PREFIX}/lib/cmake/yolov8"
-    COMMENT "Uninstalling YoloV8"
+    COMMENT "Uninstalling ScrfdV8"
 )
 
 # ROS2 Install [ADDED]  
