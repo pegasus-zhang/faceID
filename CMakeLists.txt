@@ -4,7 +4,7 @@ project(faceID)
 option(GTEST_OPTION "build gtest samples" OFF)
 
 option(CUDA_USE_STATIC_CUDA_RUNTIME OFF)
-set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_BUILD_TYPE Debug)
 SET(LIBRARY_OUTPUT_PATH ${CMAKE_CURRENT_SOURCE_DIR}/lib)
@@ -156,6 +156,14 @@ target_link_libraries(face_recognizer ${OpenCV_LIBS} face_register
                                                     scrfd_cuda)
 SET_TARGET_PROPERTIES (face_recognizer PROPERTIES VERSION "${_app_version_}")
 
+add_library(mythread SHARED ${PROJECT_SOURCE_DIR}/src/my_thread.cpp)
+target_link_libraries(mythread pthread)
+SET_TARGET_PROPERTIES (mythread PROPERTIES VERSION "${_app_version_}")
+
+add_library(ros_adapter SHARED ${PROJECT_SOURCE_DIR}/src/ros_adapter.cpp)
+target_link_libraries(ros_adapter pthread ${OpenCV_LIBS})
+SET_TARGET_PROPERTIES (ros_adapter PROPERTIES VERSION "${_app_version_}")
+
 
 add_executable(face_matcher_test  src/face_matcher_test.cpp)
 target_link_libraries(face_matcher_test  face_matcher 
@@ -174,6 +182,7 @@ target_link_libraries(faceID  scrfd_cuda
                                 jsoncpp
                                 glog
                                 pthread
+                                ros_adapter
                                 )
 add_executable(face_feature_test src/face_feature_test.cpp)
 target_link_libraries(face_feature_test  face_feature
@@ -182,7 +191,21 @@ target_link_libraries(face_feature_test  face_feature
 add_executable(face_recognizer_test src/face_recognizer_test.cpp)
 target_link_libraries(face_recognizer_test   face_recognizer 
                                             glog
-                                )       
+                                )     
+add_executable(mythread_test src/my_thread.cpp)
+target_link_libraries(mythread_test   pthread
+                                ) 
+
+add_executable(face_id_thread_test src/face_id_thread.cpp)
+target_link_libraries(face_id_thread_test   face_recognizer
+                                            ros_adapter
+                                            mythread 
+                                            ${catkin_LIBRARIES}
+                                            pthread
+                                            
+                                )                                 
+                                
+
 # # ROS-Specific Targets [ADDED]  
 # if(DEFINED ENV{ROS_VERSION})  
 # if($ENV{ROS_VERSION} EQUAL 1) # [ADDED]  

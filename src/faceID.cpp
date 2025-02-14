@@ -17,6 +17,7 @@
 #include "jsoncpp/json/json.h"
 #include <fstream>
 #include <csignal>  
+#include "ros_adapter.h"
 
 
 using namespace MatrixRobotVisionGpu;
@@ -312,11 +313,13 @@ int main(int argc,char* argv[])
     else if(is_ros){  
 
         std::unique_ptr<RosAdapter> ros_adapter;  // 基类智能指针
-        #ifdef ROS_ENABLE  
+        #ifdef ROS_ENABLE
+            ros::init(argc, argv, "faceID");
             ros_adapter = std::make_unique<Ros1Adapter>();  
         #endif  
 
-        #ifdef ROS2_ENABLE  
+        #ifdef ROS2_ENABLE
+            rclcpp::init(argc, argv);  
             ros_adapter = std::make_unique<Ros2Adapter>();  
         #endif
         
@@ -326,10 +329,7 @@ int main(int argc,char* argv[])
         }  
 
         // 初始化 ROS 节点  
-        ros_adapter->init(argc, argv, "faceID");  
-
-        // 订阅消息  
-        ros_adapter->subscribe("/cam_front/csi_cam/image_raw/compressed", 10);  
+        ros_adapter->Init("faceID", "/cam_front/csi_cam/image_raw/compressed", 1);  
 
         // 创建一个线程用于运行 ROS spin  
         std::thread spin_thread([&]() {  
@@ -339,34 +339,8 @@ int main(int argc,char* argv[])
         signal(SIGINT, signalHandler);   
         while(running)
         {
-
-            auto msg = ros_adapter->popMessage();  
-            // boost::shared_ptr<void> image_msg;  
-            cv::Mat image;
-            if (msg){
-                #ifdef ROS_ENABLE  
-                            auto image_msg = boost::static_pointer_cast<Ros1Adapter::CompressedImage>(msg);  
-                            ROS_INFO("Processing image from queue...");  
-                            std::cout << "Image size: " << image_msg->data.size() << " bytes" << std::endl;  
-                            image = cv::imdecode(cv::Mat(image_msg->data), cv::IMREAD_COLOR); // 解码为 BGR 图像  
-                #endif  
-
-                #ifdef ROS2_ENABLE  
-                            auto image_msg = boost::static_pointer_cast<Ros2Adapter::CompressedImage>(msg);  
-                            RCLCPP_INFO(rclcpp::get_logger("fifo_queue_example"), "Processing image from queue...");  
-                            std::cout << "Image size: " << image_msg->data.size() << " bytes" << std::endl; 
-                            image = cv::imdecode(cv::Mat(image_msg->data), cv::IMREAD_COLOR); // 解码为 BGR 图像  
-                #endif
-            } else{
-                std::cerr << "No message received from ros_adapter." << std::endl;
-                continue;
-            }
-            // cv::Mat image = cv::imdecode(cv::Mat(image_msg->data), cv::IMREAD_COLOR); // 解码为 BGR 图像  
-            if (image.empty()) {  
-                throw std::runtime_error("Failed to decode image from compressed data.");  
-            }   
             cv::cuda::GpuMat bgr_image;
-            bgr_image.upload(image);
+            ros_adapter->GetImage(bgr_image);
             std::shared_future<IScrfd::BoxArray> boxes_future;
             auto begin_timer = timestamp_now_float();
             if(cmd_parser.exist("roi"))
