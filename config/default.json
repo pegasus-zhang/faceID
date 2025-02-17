@@ -1,0 +1,110 @@
+{
+    "CALIBRATE_POINTS_PIXEL": [
+        [
+            400,
+            480
+        ],
+        [
+            800,
+            480
+        ],
+        [
+            400,
+            960
+        ],
+        [
+            800,
+            960
+        ]
+    ],
+    "CALIBRATE_POINTS_CAMERA": [
+        [
+            -1.0,
+            0.0,
+            3.08
+        ],
+        [
+            1.0,
+            0.0,
+            3.08
+        ],
+        [
+            -1.0,
+            0.0,
+            0.68
+        ],
+        [
+            1.0,
+            0.0,
+            0.68
+        ]
+    ],
+    "PERPECTIVE_MATRIX": [
+        [
+            -0.0782110541289914,
+            -0.7548751596203873,
+            686.0000372000625
+        ],
+        [
+            0.024075799480976455,
+            -1.3696289161043549,
+            1099.8933799391168
+        ],
+        [
+            1.1710623488324175e-05,
+            -0.001251423071173763,
+            1.0
+        ]
+    ],
+    "TARGET_SIZE": [
+        1200,
+        960
+    ],
+    "camera2world_extrinsic": [
+        [
+            0.01608003,
+            -0.0311412,
+            0.99878122,
+            0.34365203
+        ],
+        [
+            -0.99925828,
+            0.00288053,
+            0.0384005,
+            0.00702156
+        ],
+        [
+            -0.00407285,
+            -0.99951084,
+            -0.0310078,
+            0.10973795
+        ],
+        [
+            0,
+            0,
+            0,
+            1
+        ]
+    ],
+    "database_path": "/home/titan/02_project/faceID/data/known_people/database-resnet50.json",
+    "camera_parameter":
+    {
+        "fisheye_rostopic":"/cam_front_fish/csi_cam/image_raw/compressed"
+    },
+    "model_parameter":
+    {
+        "face_detector":
+        {
+            "model_path": "/home/titan/02_project/faceID/weights/det_10g.onnx",
+            "confidence_threshold": 0.6,
+            "build_engine":false
+        },
+        "face_feature":
+        {
+            "model_path": "/home/titan/02_project/faceID/weights/resnet50.onnx",
+            "confidence_threshold": 0.5,
+            "build_engine":false
+        }
+        
+    }
+}

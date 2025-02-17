@@ -1,11 +1,19 @@
 #include "face_recognizer.h"
 #include <opencv2/opencv.hpp>
-
+#include <fstream>
 int main()
 {
     // 创建 FaceRecognizer 对象
     FaceRecognizer face_recognizer;
-    face_recognizer.Init("/home/jetson/workspace/faceID_jzb/data/known_people/database-resnet50.json", 0.5, 0.5);
+    // 创建一个配置对象
+    nlohmann::json config;
+    std::ifstream file("../config/default.json");  // 打开 JSON 文件
+    if (!file) {
+        std::cerr << "无法打开配置文件!" << std::endl;
+        return -1;
+    }
+    file >> config;  // 解析 JSON
+    face_recognizer.Init(config);
 
     // 读取测试图像
     cv::cuda::GpuMat img;

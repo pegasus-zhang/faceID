@@ -9,21 +9,22 @@ FaceRecognizer::~FaceRecognizer()
     // 清理资源
 }
 
-int FaceRecognizer::Init(std::string database_path, float det_thresh, float rec_thresh)
+int FaceRecognizer::Init(nlohmann::json config)
 {
-    det_thresh_ = det_thresh;
-    rec_thresh_ = rec_thresh;
+    config_ = config;
     face_detector_ = MatrixRobotVisionGpu::IScrfdManager::create();
-    face_detector_->Init("/home/jetson/workspace/faceID_jzb/weights/det_10g.onnx",
-                         false,det_thresh_);
+    face_detector_->Init(config["model_parameter"]["face_detector"]["model_path"],
+                         config["model_parameter"]["face_detector"]["build_engine"],
+                         config["model_parameter"]["face_detector"]["confidence_threshold"]);
     face_feature_ = GeelyRobotVisionGpu::IFaceFeatureManager::create();
     face_feature_->SetBatchSize(5);
     face_feature_->SetPrecision(GeelyRobotVisionGpu::IFaceFeature::Mode::FP32);
-    face_feature_->Init("/home/jetson/workspace/faceID_jzb/weights/resnet50.onnx",
-                        false);
+    face_feature_->Init(config["model_parameter"]["face_feature"]["model_path"],
+                        config["model_parameter"]["face_feature"]["build_engine"],
+                        config["model_parameter"]["face_feature"]["confidence_threshold"]);
     
     face_register_ = std::make_shared<FaceRegister>();
-    face_register_->Init(database_path);
+    face_register_->Init(config["database_path"]);
 
     return 0; // 返回0表示成功
 }
@@ -97,6 +98,6 @@ int FaceRecognizer::DetectFace(const cv::cuda::GpuMat& img, FaceInfo& face_info)
     {
         return ret;
     }
-    ret = face_register_->SearchFace(face_info.features,rec_thresh_, face_info.face_ids, face_info.scores);
+    ret = face_register_->SearchFace(face_info.features,config_["model_parameter"]["face_feature"]["confidence_threshold"], face_info.face_ids, face_info.scores);
     return ret; // 返回0表示成功
 }

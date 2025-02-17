@@ -8,3 +8,4 @@ lib/libscrfd_cuda.so.
 lib/*.so
 lib/*.so.*
 workspace/*
+weights/*

@@ -1,6 +1,9 @@
 #include"face_id_thread.h"
 #include <future>
 #include <chrono>
+#include <glog/logging.h>
+#include "cmdline.h"
+#include <fstream>
 FaceDetectThread::FaceDetectThread(/* args */)
 {
 }
@@ -12,7 +15,7 @@ FaceDetectThread::~FaceDetectThread()
 void FaceDetectThread::run()
 {
     std::cout << "FaceDetectThread started." << std::endl;
-    ros::Rate rate(3); // 3 Hz
+    ros::Rate rate(5); // 3 Hz
     while (!is_stopped() && ros::ok()) {
         // 处理挂起逻辑
         std::unique_lock<std::mutex> lock(cv_mtx_);
@@ -78,9 +81,9 @@ int FaceDetectThread::Init(nlohmann::json config)
         std::cerr << "No ROS version enabled. Define either ROS_ENABLE or ROS2_ENABLE." << std::endl;  
         return 1;  
     } 
-    ros_adapter_->Init("faceID", "/cam_front/csi_cam/image_raw/compressed", 1); 
+    ros_adapter_->Init("faceID", config["camera_parameter"]["fisheye_rostopic"], 1); 
     face_recognizer_ = std::make_shared<FaceRecognizer>();
-    face_recognizer_->Init("/home/jetson/workspace/faceID_jzb/data/known_people/database-resnet50.json", 0.5, 0.5);
+    face_recognizer_->Init(config);
 
     return 0;
 }
@@ -97,12 +100,27 @@ void FaceDetectThread::GetImageTask(cv::cuda::GpuMat& gpu_frame)
 
 int main(int argc, char** argv)
 {
+    FLAGS_logtostderr=true;
+    FLAGS_colorlogtostderr=true;
+    google::InitGoogleLogging(argv[0]);
+    cmdline::parser cmd_parser;
+    cmd_parser.add<std::string>("config_path",'c',"config path",false,"/home/titan/02_project/faceID/config/default.json");
+    cmd_parser.add("show",'\0',"show result flag");
+    cmd_parser.parse_check(argc,argv);
+    bool show_flag = cmd_parser.exist("show");
+    std::string config_path = cmd_parser.get<std::string>("config_path");
+    
     // 初始化ROS节点
     ros::init(argc, argv, "face_id");
 
     // 创建一个配置对象
     nlohmann::json config;
-
+    std::ifstream file(config_path);  // 打开 JSON 文件
+    if (!file) {
+        std::cerr << "无法打开配置文件!" << std::endl;
+        return -1;
+    }
+    file >> config;  // 解析 JSON
     // 创建一个FaceDetectThread对象
     FaceDetectThread face_detect_thread;
 

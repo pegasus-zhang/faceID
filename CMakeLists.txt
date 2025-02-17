@@ -4,7 +4,7 @@ project(faceID)
 option(GTEST_OPTION "build gtest samples" OFF)
 
 option(CUDA_USE_STATIC_CUDA_RUNTIME OFF)
-set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_BUILD_TYPE Debug)
 SET(LIBRARY_OUTPUT_PATH ${CMAKE_CURRENT_SOURCE_DIR}/lib)
@@ -107,11 +107,13 @@ option(With_TRT "Use TensorRT" ON)
 if(With_TRT)
     set(TensorRT_version 8.5.2)
     message(STATUS "USE TensorRT-${TensorRT_version}")
-    set(TENSORRT_LIB_PATH "/usr/lib")
-    file(GLOB TRT_LIBS "${TENSORRT_LIB_PATH}/*.so")
-    set(TENSOR_INCLUDE_DIRS "/usr/include")
+    set(TENSORRT_LIB_PATH "/usr/lib/aarch64-linux-gnu")
+    # file(GLOB TRT_LIBS "${TENSORRT_LIB_PATH}/*.so")
+    set(TRT_LIBS nvinfer nvonnxparser)
+    set(TENSOR_INCLUDE_DIRS "/usr/include/aarch64-linux-gnu")
     include_directories(${TENSOR_INCLUDE_DIRS})
     link_directories(${TENSORRT_LIB_PATH})
+    message(STATUS "${TensorRT_LDFLAGS}")
 endif()
 # TensorRT
 
@@ -125,7 +127,7 @@ SET_TARGET_PROPERTIES (scrfd PROPERTIES VERSION "${_app_version_}")
 
 
 cuda_add_library(scrfd_cuda SHARED ${PROJECT_SOURCE_DIR}/src/scrfd_cuda.cu)
-target_link_libraries(scrfd_cuda ${TRT_LIBS} ${OpenCV_LIBS} ${catkin_LIBRARIES})
+target_link_libraries(scrfd_cuda ${TRT_LIBS} ${OpenCV_LIBS})
 SET_TARGET_PROPERTIES (scrfd_cuda PROPERTIES VERSION "${_app_version_}")
 
 cuda_add_library(face_feature SHARED ${PROJECT_SOURCE_DIR}/src/face_feature.cu)
@@ -161,7 +163,7 @@ target_link_libraries(mythread pthread)
 SET_TARGET_PROPERTIES (mythread PROPERTIES VERSION "${_app_version_}")
 
 add_library(ros_adapter SHARED ${PROJECT_SOURCE_DIR}/src/ros_adapter.cpp)
-target_link_libraries(ros_adapter pthread ${OpenCV_LIBS})
+target_link_libraries(ros_adapter pthread ${OpenCV_LIBS} ${catkin_LIBRARIES})
 SET_TARGET_PROPERTIES (ros_adapter PROPERTIES VERSION "${_app_version_}")
 
 
@@ -202,6 +204,7 @@ target_link_libraries(face_id_thread_test   face_recognizer
                                             mythread 
                                             ${catkin_LIBRARIES}
                                             pthread
+                                            glog
                                             
                                 )                                 
                                 

@@ -135,7 +135,6 @@ int main(int argc,char* argv[])
     cmd_parser.add("compile",'\0',"build engine");
     cmd_parser.add("video",'\0',"input is video file");
     cmd_parser.add<double>("confidence",'\0',"confidence threshold",false,0.4f);
-    cmd_parser.add<double>("nms",'\0',"nms threshold",false,0.4f);
     cmd_parser.add<std::string>("roi",'\0',"set roi, separate with comma. for example, x,y,width,height",false);
     cmd_parser.add<std::string>("resize",'\0',"resize image, separate with comma. for example, width,height",false);
     cmd_parser.add("show",'\0',"show result flag");
@@ -166,7 +165,6 @@ int main(int argc,char* argv[])
     double max_workspace = cmd_parser.get<double>("max_workspace"); 
     bool compile_flag = cmd_parser.exist("compile");
     double confidence_threshold = cmd_parser.get<double>("confidence");
-    double nms_threshold = cmd_parser.get<double>("nms");
     std::string roi_str = cmd_parser.get<std::string>("roi");
     std::vector<int> roi_vect;
     if(cmd_parser.exist("roi"))
@@ -207,7 +205,7 @@ int main(int argc,char* argv[])
     engine->SetCalibrationCachePath(calibration_cache_path);
     engine->SetMaxWorkspace(max_workspace * 1024 *1024 *1024);//接口输入的单位是byte，转换为GB
 
-    engine->Init(onnx_file,compile_flag,confidence_threshold, nms_threshold);
+    engine->Init(onnx_file,compile_flag,confidence_threshold);
     // engine->Init(onnx_file,1);
     LOG(INFO) << "----------engine init!----------";
     float all_used_time = 0.0;

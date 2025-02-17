@@ -2447,7 +2447,7 @@ namespace GeelyRobotVisionGpu
     class FaceFeature: public IFaceFeature
     {
         public:
-            int Init(std::string model_name, bool build_engine, float confidence_threshold=0.4, float nms_threshold=0.4);
+            int Init(std::string model_name, bool build_engine, float confidence_threshold=0.4);
             std::shared_future<cv::cuda::GpuMat> Inference(const cv::cuda::GpuMat& input_image);
             std::vector<std::shared_future<cv::cuda::GpuMat>> Inference(const std::vector<cv::cuda::GpuMat>& input_images);
             int SetDeviceID(int id);
@@ -2466,7 +2466,7 @@ namespace GeelyRobotVisionGpu
             std::shared_ptr<Infer> engine_ = nullptr;
     };
 
-    int FaceFeature::Init(std::string onnx_file, bool build_engine, float confidence_threshold, float nms_threshold)
+    int FaceFeature::Init(std::string onnx_file, bool build_engine, float confidence_threshold)
     {
         #ifdef __app_version__
             std::string strVersion = __app_version__;
@@ -2490,7 +2490,7 @@ namespace GeelyRobotVisionGpu
             calibration_path_,
             int8_entropy_calibrator_cache_file_);
         }
-        engine_ = create_infer(engine_file_name, device_id_, confidence_threshold, nms_threshold);
+        engine_ = create_infer(engine_file_name, device_id_, confidence_threshold, 0.0);
         if(engine_ == nullptr){
             INFOF("Engine is nullptr\n");
             return -1;
