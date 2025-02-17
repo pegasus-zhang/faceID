@@ -1,0 +1,39 @@
+{
+    "3d_calibration_parameter":
+    {
+        "CALIBRATE_POINTS_PIXEL":[[400,398],[800,398],[400,796],[800,796]],
+        "CALIBRATE_POINTS_CAMERA":[[-1.0,0,2.27],[1.0,0,2.27],[-1.0,0,0.28],[1.0,0,0.28]],
+        "PERPECTIVE_MATRIX":[[-7.22619449e-02, -7.96063434e-01,  6.93516287e+02],
+        [ 3.83393381e-02, -1.13334391e+00,  8.72356634e+02],
+        [ 4.15712789e-05, -1.32348016e-03,  1.00000000e+00]],
+        "TARGET_SIZE":[1200,796]
+    },
+    "database_path": "/home/titan/02_project/faceID/data/known_people/database-resnet50.json",
+    "camera_parameter":
+    {
+        "fisheye_rostopic":"/cam_front_fish/csi_cam/image_raw/compressed",
+        "camera_intrinsics":[[511.3623953605, 0.0, 945.0244978431],[0, 511.4026186026, 775.5020771799],[0, 0, 1]],
+        "camera_distortion":[0.1347717201, -0.0338054641, -0.0023963342, 0.0011715332], 
+        "camera2world_extrinsic" :[[ 0.01608003, -0.0311412, 0.99878122, 0.34365203],
+        [-0.99925828, 0.00288053, 0.0384005, 0.00702156],
+        [-0.00407285, -0.99951084, -0.0310078, 0.10973795],
+        [ 0, 0, 0, 1 ]],
+        "image_size":[1920,1536]      
+    },
+    "model_parameter":
+    {
+        "face_detector":
+        {
+            "model_path": "/home/titan/02_project/faceID/weights/det_10g.onnx",
+            "confidence_threshold": 0.6,
+            "build_engine":false
+        },
+        "face_feature":
+        {
+            "model_path": "/home/titan/02_project/faceID/weights/resnet50.onnx",
+            "confidence_threshold": 0.5,
+            "build_engine":false
+        }
+        
+    }
+}

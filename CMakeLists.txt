@@ -207,7 +207,11 @@ target_link_libraries(face_id_thread_test   face_recognizer
                                             glog
                                             
                                 )                                 
-                                
+add_executable(ipm_test src/ipm.cpp)
+target_link_libraries(ipm_test   ${OpenCV_LIBS}
+                                            
+                                )                                 
+                                                                
 
 # # ROS-Specific Targets [ADDED]  
 # if(DEFINED ENV{ROS_VERSION})  
