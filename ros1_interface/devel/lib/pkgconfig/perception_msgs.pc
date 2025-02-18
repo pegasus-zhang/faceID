@@ -1,8 +1,8 @@
-prefix=/home/jetson/workspace/faceID/ros1_interface/devel
+prefix=/home/jetson/workspace/faceID_jzb/ros1_interface/devel
 
 Name: perception_msgs
 Description: Description of perception_msgs
 Version: 0.0.0
-Cflags: -I/home/jetson/workspace/faceID/ros1_interface/devel/include
+Cflags: -I/home/jetson/workspace/faceID_jzb/ros1_interface/devel/include
 Libs: -L${prefix}/lib 
 Requires: geometry_msgs roscpp rospy std_msgs message_runtime

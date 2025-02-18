@@ -159,11 +159,20 @@ struct PercCmd_
 #if defined(_WIN32) && defined(PERC_SOCIALIZE)
   #undef PERC_SOCIALIZE
 #endif
+#if defined(_WIN32) && defined(PERC_SPECT_PERFORM)
+  #undef PERC_SPECT_PERFORM
+#endif
+#if defined(_WIN32) && defined(PERC_FACE_DETCTION)
+  #undef PERC_FACE_DETCTION
+#endif
 #if defined(_WIN32) && defined(PERC_DANGER_INFO)
   #undef PERC_DANGER_INFO
 #endif
 #if defined(_WIN32) && defined(PERC_WELCOME_DEMO)
   #undef PERC_WELCOME_DEMO
+#endif
+#if defined(_WIN32) && defined(PERC_LOBBY_DEMO)
+  #undef PERC_LOBBY_DEMO
 #endif
 #if defined(_WIN32) && defined(PERC_CANCEL)
   #undef PERC_CANCEL
@@ -211,8 +220,11 @@ struct PercCmd_
     PERC_CATWALK_BACK = 47u,
     PERC_FREE_TIME = 50u,
     PERC_SOCIALIZE = 51u,
+    PERC_SPECT_PERFORM = 55u,
+    PERC_FACE_DETCTION = 56u,
     PERC_DANGER_INFO = 60u,
-    PERC_WELCOME_DEMO = 70u,
+    PERC_WELCOME_DEMO = 61u,
+    PERC_LOBBY_DEMO = 62u,
     PERC_CANCEL = 100u,
     PERC_NODE_CLOSE = 200u,
     PERC_NODE_START = 201u,
@@ -233,6 +245,12 @@ typedef boost::shared_ptr< ::perception_msgs::PercCmd > PercCmdPtr;
 typedef boost::shared_ptr< ::perception_msgs::PercCmd const> PercCmdConstPtr;
 
 // constants requiring out of line definition
+
+   
+
+   
+
+   
 
    
 
@@ -380,12 +398,12 @@ struct MD5Sum< ::perception_msgs::PercCmd_<ContainerAllocator> >
 {
   static const char* value()
   {
-    return "c79aa339805326edb4a24a21654c5839";
+    return "08540cb1d7896a929933b0fa32473d34";
   }
 
   static const char* value(const ::perception_msgs::PercCmd_<ContainerAllocator>&) { return value(); }
-  static const uint64_t static_value1 = 0xc79aa339805326edULL;
-  static const uint64_t static_value2 = 0xb4a24a21654c5839ULL;
+  static const uint64_t static_value1 = 0x08540cb1d7896a92ULL;
+  static const uint64_t static_value2 = 0x9933b0fa32473d34ULL;
 };
 
 template<class ContainerAllocator>
@@ -464,11 +482,18 @@ struct Definition< ::perception_msgs::PercCmd_<ContainerAllocator> >
 "uint32 PERC_FREE_TIME            = 50\n"
 "# 社交模式\n"
 "uint32 PERC_SOCIALIZE            = 51\n"
+"# 围观场景\n"
+"uint32 PERC_SPECT_PERFORM        = 55\n"
+"# 表情分析\n"
+"uint32 PERC_FACE_DETCTION        = 56\n"
+"\n"
 "\n"
 "# 上报危险信息（不需要请求）\n"
 "uint32 PERC_DANGER_INFO          = 60\n"
 "# 欢迎模式\n"
-"uint32 PERC_WELCOME_DEMO         = 70\n"
+"uint32 PERC_WELCOME_DEMO         = 61\n"
+"# 回大厅找人\n"
+"uint32 PERC_LOBBY_DEMO           = 62\n"
 "\n"
 "# 任务取消（不需要请求）\n"
 "uint32 PERC_CANCEL               = 100\n"

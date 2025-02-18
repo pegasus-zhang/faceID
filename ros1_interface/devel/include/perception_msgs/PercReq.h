@@ -118,6 +118,12 @@ struct PercReq_
 #if defined(_WIN32) && defined(PERC_SOCIALIZE)
   #undef PERC_SOCIALIZE
 #endif
+#if defined(_WIN32) && defined(PERC_SPECT_PERFORM)
+  #undef PERC_SPECT_PERFORM
+#endif
+#if defined(_WIN32) && defined(PERC_FACE_DETCTION)
+  #undef PERC_FACE_DETCTION
+#endif
 #if defined(_WIN32) && defined(PERC_DANGER_INFO)
   #undef PERC_DANGER_INFO
 #endif
@@ -135,6 +141,9 @@ struct PercReq_
 #endif
 #if defined(_WIN32) && defined(PERC_HAND_WAVE)
   #undef PERC_HAND_WAVE
+#endif
+#if defined(_WIN32) && defined(PERC_CAMERA_DEMO)
+  #undef PERC_CAMERA_DEMO
 #endif
 #if defined(_WIN32) && defined(PERC_CANCEL)
   #undef PERC_CANCEL
@@ -164,12 +173,15 @@ struct PercReq_
     PERC_CATWALK_BACK = 47u,
     PERC_FREE_TIME = 50u,
     PERC_SOCIALIZE = 51u,
+    PERC_SPECT_PERFORM = 55u,
+    PERC_FACE_DETCTION = 56u,
     PERC_DANGER_INFO = 60u,
     PERC_HAND_OK = 70u,
     PERC_HAND_V = 71u,
     PERC_HAND_SHAKE = 72u,
     PERC_HAND_COME = 73u,
     PERC_HAND_WAVE = 74u,
+    PERC_CAMERA_DEMO = 80u,
     PERC_CANCEL = 100u,
   };
 
@@ -185,6 +197,12 @@ typedef boost::shared_ptr< ::perception_msgs::PercReq > PercReqPtr;
 typedef boost::shared_ptr< ::perception_msgs::PercReq const> PercReqConstPtr;
 
 // constants requiring out of line definition
+
+   
+
+   
+
+   
 
    
 
@@ -318,12 +336,12 @@ struct MD5Sum< ::perception_msgs::PercReq_<ContainerAllocator> >
 {
   static const char* value()
   {
-    return "2b66ac864838d8385327b5e39c1efa29";
+    return "492b0539a30d91f76050eff6a0b4c63a";
   }
 
   static const char* value(const ::perception_msgs::PercReq_<ContainerAllocator>&) { return value(); }
-  static const uint64_t static_value1 = 0x2b66ac864838d838ULL;
-  static const uint64_t static_value2 = 0x5327b5e39c1efa29ULL;
+  static const uint64_t static_value1 = 0x492b0539a30d91f7ULL;
+  static const uint64_t static_value2 = 0x6050eff6a0b4c63aULL;
 };
 
 template<class ContainerAllocator>
@@ -398,6 +416,10 @@ struct Definition< ::perception_msgs::PercReq_<ContainerAllocator> >
 "uint32 PERC_FREE_TIME            = 50\n"
 "# 社交模式\n"
 "uint32 PERC_SOCIALIZE            = 51\n"
+"# 围观场景\n"
+"uint32 PERC_SPECT_PERFORM        = 55\n"
+"# 表情分析\n"
+"uint32 PERC_FACE_DETCTION        = 56\n"
 "\n"
 "# 上报危险信息（不需要请求）\n"
 "uint32 PERC_DANGER_INFO          = 60\n"
@@ -407,6 +429,7 @@ struct Definition< ::perception_msgs::PercReq_<ContainerAllocator> >
 "uint32 PERC_HAND_SHAKE           = 72\n"
 "uint32 PERC_HAND_COME            = 73\n"
 "uint32 PERC_HAND_WAVE            = 74\n"
+"uint32 PERC_CAMERA_DEMO          = 80\n"
 "\n"
 "# 任务取消（不需要请求）\n"
 "uint32 PERC_CANCEL               = 100\n"

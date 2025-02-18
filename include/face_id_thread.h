@@ -11,6 +11,9 @@ private:
     std::unique_ptr<RosAdapter> ros_adapter_ = nullptr;
     std::shared_ptr<FaceRecognizer> face_recognizer_ = nullptr;
     nlohmann::json config_;
+    std::string host_name_="";
+    bool print_flag_ = false;
+    std::mutex mutex_;
 public:
     FaceDetectThread(/* args */);
     ~FaceDetectThread();
@@ -18,4 +21,7 @@ public:
     int Init(nlohmann::json config);
     void Spin();
     void GetImageTask(cv::cuda::GpuMat& gpu_frame);
+    int SetHostName(std::string host_name);
+    std::string GetHostName();
+    int FlipPrintFlag();
 };

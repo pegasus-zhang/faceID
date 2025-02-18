@@ -94,12 +94,21 @@
 (intern "*PERC_SOCIALIZE*" (find-package "PERCEPTION_MSGS::PERCCMD"))
 (shadow '*PERC_SOCIALIZE* (find-package "PERCEPTION_MSGS::PERCCMD"))
 (defconstant perception_msgs::PercCmd::*PERC_SOCIALIZE* 51)
+(intern "*PERC_SPECT_PERFORM*" (find-package "PERCEPTION_MSGS::PERCCMD"))
+(shadow '*PERC_SPECT_PERFORM* (find-package "PERCEPTION_MSGS::PERCCMD"))
+(defconstant perception_msgs::PercCmd::*PERC_SPECT_PERFORM* 55)
+(intern "*PERC_FACE_DETCTION*" (find-package "PERCEPTION_MSGS::PERCCMD"))
+(shadow '*PERC_FACE_DETCTION* (find-package "PERCEPTION_MSGS::PERCCMD"))
+(defconstant perception_msgs::PercCmd::*PERC_FACE_DETCTION* 56)
 (intern "*PERC_DANGER_INFO*" (find-package "PERCEPTION_MSGS::PERCCMD"))
 (shadow '*PERC_DANGER_INFO* (find-package "PERCEPTION_MSGS::PERCCMD"))
 (defconstant perception_msgs::PercCmd::*PERC_DANGER_INFO* 60)
 (intern "*PERC_WELCOME_DEMO*" (find-package "PERCEPTION_MSGS::PERCCMD"))
 (shadow '*PERC_WELCOME_DEMO* (find-package "PERCEPTION_MSGS::PERCCMD"))
-(defconstant perception_msgs::PercCmd::*PERC_WELCOME_DEMO* 70)
+(defconstant perception_msgs::PercCmd::*PERC_WELCOME_DEMO* 61)
+(intern "*PERC_LOBBY_DEMO*" (find-package "PERCEPTION_MSGS::PERCCMD"))
+(shadow '*PERC_LOBBY_DEMO* (find-package "PERCEPTION_MSGS::PERCCMD"))
+(defconstant perception_msgs::PercCmd::*PERC_LOBBY_DEMO* 62)
 (intern "*PERC_CANCEL*" (find-package "PERCEPTION_MSGS::PERCCMD"))
 (shadow '*PERC_CANCEL* (find-package "PERCEPTION_MSGS::PERCCMD"))
 (defconstant perception_msgs::PercCmd::*PERC_CANCEL* 100)
@@ -147,8 +156,11 @@
         ((= const 47) 'perception_msgs::PercCmd::*PERC_CATWALK_BACK*)
         ((= const 50) 'perception_msgs::PercCmd::*PERC_FREE_TIME*)
         ((= const 51) 'perception_msgs::PercCmd::*PERC_SOCIALIZE*)
+        ((= const 55) 'perception_msgs::PercCmd::*PERC_SPECT_PERFORM*)
+        ((= const 56) 'perception_msgs::PercCmd::*PERC_FACE_DETCTION*)
         ((= const 60) 'perception_msgs::PercCmd::*PERC_DANGER_INFO*)
-        ((= const 70) 'perception_msgs::PercCmd::*PERC_WELCOME_DEMO*)
+        ((= const 61) 'perception_msgs::PercCmd::*PERC_WELCOME_DEMO*)
+        ((= const 62) 'perception_msgs::PercCmd::*PERC_LOBBY_DEMO*)
         ((= const 100) 'perception_msgs::PercCmd::*PERC_CANCEL*)
         ((= const 200) 'perception_msgs::PercCmd::*PERC_NODE_CLOSE*)
         ((= const 201) 'perception_msgs::PercCmd::*PERC_NODE_START*)
@@ -332,7 +344,7 @@
    self)
   )
 
-(setf (get perception_msgs::PercCmd :md5sum-) "c79aa339805326edb4a24a21654c5839")
+(setf (get perception_msgs::PercCmd :md5sum-) "08540cb1d7896a929933b0fa32473d34")
 (setf (get perception_msgs::PercCmd :datatype-) "perception_msgs/PercCmd")
 (setf (get perception_msgs::PercCmd :definition-)
       "std_msgs/Header header
@@ -395,11 +407,18 @@ uint32 PERC_CATWALK_BACK         = 47
 uint32 PERC_FREE_TIME            = 50
 # 社交模式
 uint32 PERC_SOCIALIZE            = 51
+# 围观场景
+uint32 PERC_SPECT_PERFORM        = 55
+# 表情分析
+uint32 PERC_FACE_DETCTION        = 56
+
 
 # 上报危险信息（不需要请求）
 uint32 PERC_DANGER_INFO          = 60
 # 欢迎模式
-uint32 PERC_WELCOME_DEMO         = 70
+uint32 PERC_WELCOME_DEMO         = 61
+# 回大厅找人
+uint32 PERC_LOBBY_DEMO           = 62
 
 # 任务取消（不需要请求）
 uint32 PERC_CANCEL               = 100
@@ -453,6 +472,6 @@ float64 z
 
 
 
-(provide :perception_msgs/PercCmd "c79aa339805326edb4a24a21654c5839")
+(provide :perception_msgs/PercCmd "08540cb1d7896a929933b0fa32473d34")
 
 

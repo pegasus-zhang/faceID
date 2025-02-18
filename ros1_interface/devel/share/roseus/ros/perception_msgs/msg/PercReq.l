@@ -81,6 +81,12 @@
 (intern "*PERC_SOCIALIZE*" (find-package "PERCEPTION_MSGS::PERCREQ"))
 (shadow '*PERC_SOCIALIZE* (find-package "PERCEPTION_MSGS::PERCREQ"))
 (defconstant perception_msgs::PercReq::*PERC_SOCIALIZE* 51)
+(intern "*PERC_SPECT_PERFORM*" (find-package "PERCEPTION_MSGS::PERCREQ"))
+(shadow '*PERC_SPECT_PERFORM* (find-package "PERCEPTION_MSGS::PERCREQ"))
+(defconstant perception_msgs::PercReq::*PERC_SPECT_PERFORM* 55)
+(intern "*PERC_FACE_DETCTION*" (find-package "PERCEPTION_MSGS::PERCREQ"))
+(shadow '*PERC_FACE_DETCTION* (find-package "PERCEPTION_MSGS::PERCREQ"))
+(defconstant perception_msgs::PercReq::*PERC_FACE_DETCTION* 56)
 (intern "*PERC_DANGER_INFO*" (find-package "PERCEPTION_MSGS::PERCREQ"))
 (shadow '*PERC_DANGER_INFO* (find-package "PERCEPTION_MSGS::PERCREQ"))
 (defconstant perception_msgs::PercReq::*PERC_DANGER_INFO* 60)
@@ -99,6 +105,9 @@
 (intern "*PERC_HAND_WAVE*" (find-package "PERCEPTION_MSGS::PERCREQ"))
 (shadow '*PERC_HAND_WAVE* (find-package "PERCEPTION_MSGS::PERCREQ"))
 (defconstant perception_msgs::PercReq::*PERC_HAND_WAVE* 74)
+(intern "*PERC_CAMERA_DEMO*" (find-package "PERCEPTION_MSGS::PERCREQ"))
+(shadow '*PERC_CAMERA_DEMO* (find-package "PERCEPTION_MSGS::PERCREQ"))
+(defconstant perception_msgs::PercReq::*PERC_CAMERA_DEMO* 80)
 (intern "*PERC_CANCEL*" (find-package "PERCEPTION_MSGS::PERCREQ"))
 (shadow '*PERC_CANCEL* (find-package "PERCEPTION_MSGS::PERCREQ"))
 (defconstant perception_msgs::PercReq::*PERC_CANCEL* 100)
@@ -128,12 +137,15 @@
         ((= const 47) 'perception_msgs::PercReq::*PERC_CATWALK_BACK*)
         ((= const 50) 'perception_msgs::PercReq::*PERC_FREE_TIME*)
         ((= const 51) 'perception_msgs::PercReq::*PERC_SOCIALIZE*)
+        ((= const 55) 'perception_msgs::PercReq::*PERC_SPECT_PERFORM*)
+        ((= const 56) 'perception_msgs::PercReq::*PERC_FACE_DETCTION*)
         ((= const 60) 'perception_msgs::PercReq::*PERC_DANGER_INFO*)
         ((= const 70) 'perception_msgs::PercReq::*PERC_HAND_OK*)
         ((= const 71) 'perception_msgs::PercReq::*PERC_HAND_V*)
         ((= const 72) 'perception_msgs::PercReq::*PERC_HAND_SHAKE*)
         ((= const 73) 'perception_msgs::PercReq::*PERC_HAND_COME*)
         ((= const 74) 'perception_msgs::PercReq::*PERC_HAND_WAVE*)
+        ((= const 80) 'perception_msgs::PercReq::*PERC_CAMERA_DEMO*)
         ((= const 100) 'perception_msgs::PercReq::*PERC_CANCEL*)
         (t nil)))
 
@@ -217,7 +229,7 @@
    self)
   )
 
-(setf (get perception_msgs::PercReq :md5sum-) "2b66ac864838d8385327b5e39c1efa29")
+(setf (get perception_msgs::PercReq :md5sum-) "492b0539a30d91f76050eff6a0b4c63a")
 (setf (get perception_msgs::PercReq :datatype-) "perception_msgs/PercReq")
 (setf (get perception_msgs::PercReq :definition-)
       "
@@ -276,6 +288,10 @@ uint32 PERC_CATWALK_BACK         = 47
 uint32 PERC_FREE_TIME            = 50
 # 社交模式
 uint32 PERC_SOCIALIZE            = 51
+# 围观场景
+uint32 PERC_SPECT_PERFORM        = 55
+# 表情分析
+uint32 PERC_FACE_DETCTION        = 56
 
 # 上报危险信息（不需要请求）
 uint32 PERC_DANGER_INFO          = 60
@@ -285,6 +301,7 @@ uint32 PERC_HAND_V               = 71
 uint32 PERC_HAND_SHAKE           = 72
 uint32 PERC_HAND_COME            = 73
 uint32 PERC_HAND_WAVE            = 74
+uint32 PERC_CAMERA_DEMO          = 80
 
 # 任务取消（不需要请求）
 uint32 PERC_CANCEL               = 100
@@ -298,6 +315,6 @@ string danger_info
 
 
 
-(provide :perception_msgs/PercReq "2b66ac864838d8385327b5e39c1efa29")
+(provide :perception_msgs/PercReq "492b0539a30d91f76050eff6a0b4c63a")
 
 

@@ -52,7 +52,14 @@ if(ENABLE_ROS1)
         sensor_msgs  
     )  
     include_directories(${catkin_INCLUDE_DIRS})  
-    link_directories(${catkin_LIBRARY_DIRS})  
+    link_directories(${catkin_LIBRARY_DIRS}) 
+    find_package(perception_msgs REQUIRED
+    )
+    include_directories(${perception_msgs_INCLUDE_DIRS})
+    find_package(eye_msgs REQUIRED)
+    include_directories(${eye_msgs_INCLUDE_DIRS})
+    find_package(ros_interface REQUIRED)
+    include_directories(${ros_interface_INCLUDE_DIRS})
 endif()  
 
 # 如果启用了 ROS2  
@@ -166,6 +173,26 @@ add_library(ros_adapter SHARED ${PROJECT_SOURCE_DIR}/src/ros_adapter.cpp)
 target_link_libraries(ros_adapter pthread ${OpenCV_LIBS} ${catkin_LIBRARIES})
 SET_TARGET_PROPERTIES (ros_adapter PROPERTIES VERSION "${_app_version_}")
 
+add_library(face_id_thread SHARED src/face_id_thread.cpp)
+target_link_libraries(face_id_thread   face_recognizer
+                                            ros_adapter
+                                            mythread 
+                                            ${catkin_LIBRARIES}
+                                            pthread
+                                            glog                            
+                                ) 
+SET_TARGET_PROPERTIES (face_id_thread PROPERTIES VERSION "${_app_version_}")
+
+add_executable(face_id_thread_test src/face_id_thread.cpp)
+target_link_libraries(face_id_thread_test   face_recognizer
+                                            ros_adapter
+                                            mythread 
+                                            ${catkin_LIBRARIES}
+                                            pthread
+                                            glog
+                                            
+                                )                                 
+
 
 add_executable(face_matcher_test  src/face_matcher_test.cpp)
 target_link_libraries(face_matcher_test  face_matcher 
@@ -196,23 +223,19 @@ target_link_libraries(face_recognizer_test   face_recognizer
                                 )     
 add_executable(mythread_test src/my_thread.cpp)
 target_link_libraries(mythread_test   pthread
-                                ) 
-
-add_executable(face_id_thread_test src/face_id_thread.cpp)
-target_link_libraries(face_id_thread_test   face_recognizer
-                                            ros_adapter
-                                            mythread 
-                                            ${catkin_LIBRARIES}
-                                            pthread
-                                            glog
-                                            
                                 )                                 
 add_executable(ipm_test src/ipm.cpp)
 target_link_libraries(ipm_test   ${OpenCV_LIBS}
                                             
                                 )                                 
+add_executable(cmd_listener src/cmd_listener.cpp src/myPinyin.cpp)
+target_link_libraries(cmd_listener  face_id_thread
+                                    glog
+                                    ${catkin_LIBRARIES} 
+                                            
+                                )                                 
+add_executable(myPinyin_test src/main.cpp src/myPinyin.cpp)
                                                                 
-
 # # ROS-Specific Targets [ADDED]  
 # if(DEFINED ENV{ROS_VERSION})  
 # if($ENV{ROS_VERSION} EQUAL 1) # [ADDED]  

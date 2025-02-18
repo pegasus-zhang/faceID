@@ -151,7 +151,7 @@ class PercCmd {
 
   static md5sum() {
     //Returns md5sum for a message object
-    return 'c79aa339805326edb4a24a21654c5839';
+    return '08540cb1d7896a929933b0fa32473d34';
   }
 
   static messageDefinition() {
@@ -217,11 +217,18 @@ class PercCmd {
     uint32 PERC_FREE_TIME            = 50
     # 社交模式
     uint32 PERC_SOCIALIZE            = 51
+    # 围观场景
+    uint32 PERC_SPECT_PERFORM        = 55
+    # 表情分析
+    uint32 PERC_FACE_DETCTION        = 56
+    
     
     # 上报危险信息（不需要请求）
     uint32 PERC_DANGER_INFO          = 60
     # 欢迎模式
-    uint32 PERC_WELCOME_DEMO         = 70
+    uint32 PERC_WELCOME_DEMO         = 61
+    # 回大厅找人
+    uint32 PERC_LOBBY_DEMO           = 62
     
     # 任务取消（不需要请求）
     uint32 PERC_CANCEL               = 100
@@ -375,8 +382,11 @@ PercCmd.Constants = {
   PERC_CATWALK_BACK: 47,
   PERC_FREE_TIME: 50,
   PERC_SOCIALIZE: 51,
+  PERC_SPECT_PERFORM: 55,
+  PERC_FACE_DETCTION: 56,
   PERC_DANGER_INFO: 60,
-  PERC_WELCOME_DEMO: 70,
+  PERC_WELCOME_DEMO: 61,
+  PERC_LOBBY_DEMO: 62,
   PERC_CANCEL: 100,
   PERC_NODE_CLOSE: 200,
   PERC_NODE_START: 201,

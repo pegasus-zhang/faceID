@@ -97,6 +97,24 @@ void FaceDetectThread::GetImageTask(cv::cuda::GpuMat& gpu_frame)
     ros_adapter_->GetImage(gpu_frame);
 }
 
+int FaceDetectThread::SetHostName(std::string host_name)
+{
+    std::lock_guard<std::mutex> lock(mutex_);
+    host_name_ = host_name;
+    return 0;
+}
+std::string FaceDetectThread::GetHostName()
+{
+    std::lock_guard<std::mutex> lock(mutex_);
+    return host_name_;
+}
+int FaceDetectThread::FlipPrintFlag()
+{
+    std::lock_guard<std::mutex> lock(mutex_);
+    print_flag_ = !print_flag_;
+    return 0;
+}
+
 
 int main(int argc, char** argv)
 {
@@ -106,6 +124,7 @@ int main(int argc, char** argv)
     cmdline::parser cmd_parser;
     cmd_parser.add<std::string>("config_path",'c',"config path",false,"/home/titan/02_project/faceID/config/default.json");
     cmd_parser.add("show",'\0',"show result flag");
+    cmd_parser.add<bool>("suspend",'\0',"suspend thread flag",false,true);
     cmd_parser.parse_check(argc,argv);
     bool show_flag = cmd_parser.exist("show");
     std::string config_path = cmd_parser.get<std::string>("config_path");
@@ -121,6 +140,7 @@ int main(int argc, char** argv)
         return -1;
     }
     file >> config;  // 解析 JSON
+    config["debug_parameters"]["suspend"] = cmd_parser.get<bool>("suspend");
     // 创建一个FaceDetectThread对象
     FaceDetectThread face_detect_thread;
 

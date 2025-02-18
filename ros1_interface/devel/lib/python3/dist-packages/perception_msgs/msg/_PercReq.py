@@ -8,7 +8,7 @@ import struct
 
 
 class PercReq(genpy.Message):
-  _md5sum = "2b66ac864838d8385327b5e39c1efa29"
+  _md5sum = "492b0539a30d91f76050eff6a0b4c63a"
   _type = "perception_msgs/PercReq"
   _has_header = False  # flag to mark the presence of a Header object
   _full_text = """
@@ -67,6 +67,10 @@ uint32 PERC_CATWALK_BACK         = 47
 uint32 PERC_FREE_TIME            = 50
 # 社交模式
 uint32 PERC_SOCIALIZE            = 51
+# 围观场景
+uint32 PERC_SPECT_PERFORM        = 55
+# 表情分析
+uint32 PERC_FACE_DETCTION        = 56
 
 # 上报危险信息（不需要请求）
 uint32 PERC_DANGER_INFO          = 60
@@ -76,6 +80,7 @@ uint32 PERC_HAND_V               = 71
 uint32 PERC_HAND_SHAKE           = 72
 uint32 PERC_HAND_COME            = 73
 uint32 PERC_HAND_WAVE            = 74
+uint32 PERC_CAMERA_DEMO          = 80
 
 # 任务取消（不需要请求）
 uint32 PERC_CANCEL               = 100
@@ -109,12 +114,15 @@ string danger_info"""
   PERC_CATWALK_BACK = 47
   PERC_FREE_TIME = 50
   PERC_SOCIALIZE = 51
+  PERC_SPECT_PERFORM = 55
+  PERC_FACE_DETCTION = 56
   PERC_DANGER_INFO = 60
   PERC_HAND_OK = 70
   PERC_HAND_V = 71
   PERC_HAND_SHAKE = 72
   PERC_HAND_COME = 73
   PERC_HAND_WAVE = 74
+  PERC_CAMERA_DEMO = 80
   PERC_CANCEL = 100
 
   __slots__ = ['req_id','perc_kind','danger_info']

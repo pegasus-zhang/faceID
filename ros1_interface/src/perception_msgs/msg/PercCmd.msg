@@ -58,11 +58,18 @@ uint32 PERC_CATWALK_BACK         = 47
 uint32 PERC_FREE_TIME            = 50
 # 社交模式
 uint32 PERC_SOCIALIZE            = 51
+# 围观场景
+uint32 PERC_SPECT_PERFORM        = 55
+# 表情分析
+uint32 PERC_FACE_DETCTION        = 56
+
 
 # 上报危险信息（不需要请求）
 uint32 PERC_DANGER_INFO          = 60
 # 欢迎模式
-uint32 PERC_WELCOME_DEMO         = 70
+uint32 PERC_WELCOME_DEMO         = 61
+# 回大厅找人
+uint32 PERC_LOBBY_DEMO           = 62
 
 # 任务取消（不需要请求）
 uint32 PERC_CANCEL               = 100

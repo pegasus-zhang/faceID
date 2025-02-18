@@ -81,7 +81,7 @@ class PercReq {
 
   static md5sum() {
     //Returns md5sum for a message object
-    return '2b66ac864838d8385327b5e39c1efa29';
+    return '492b0539a30d91f76050eff6a0b4c63a';
   }
 
   static messageDefinition() {
@@ -143,6 +143,10 @@ class PercReq {
     uint32 PERC_FREE_TIME            = 50
     # 社交模式
     uint32 PERC_SOCIALIZE            = 51
+    # 围观场景
+    uint32 PERC_SPECT_PERFORM        = 55
+    # 表情分析
+    uint32 PERC_FACE_DETCTION        = 56
     
     # 上报危险信息（不需要请求）
     uint32 PERC_DANGER_INFO          = 60
@@ -152,6 +156,7 @@ class PercReq {
     uint32 PERC_HAND_SHAKE           = 72
     uint32 PERC_HAND_COME            = 73
     uint32 PERC_HAND_WAVE            = 74
+    uint32 PERC_CAMERA_DEMO          = 80
     
     # 任务取消（不需要请求）
     uint32 PERC_CANCEL               = 100
@@ -220,12 +225,15 @@ PercReq.Constants = {
   PERC_CATWALK_BACK: 47,
   PERC_FREE_TIME: 50,
   PERC_SOCIALIZE: 51,
+  PERC_SPECT_PERFORM: 55,
+  PERC_FACE_DETCTION: 56,
   PERC_DANGER_INFO: 60,
   PERC_HAND_OK: 70,
   PERC_HAND_V: 71,
   PERC_HAND_SHAKE: 72,
   PERC_HAND_COME: 73,
   PERC_HAND_WAVE: 74,
+  PERC_CAMERA_DEMO: 80,
   PERC_CANCEL: 100,
 }
 
