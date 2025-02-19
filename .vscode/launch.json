@@ -8,7 +8,7 @@
             "name": "(gdb) Launch",
             "type": "cppdbg",
             "request": "launch",
-            "program": "${workspaceFolder}/workspace/yolo_gpu_test",
+            "program": "${workspaceFolder}/workspace/faceID",
             "args": [
                 "-p",
                 "./data",
@@ -16,8 +16,8 @@
                 "./weights/det_10g.engine",
                 "--fp16",
                 // "--show",
-                // "--pause",
-                "--ros"
+                "--pause",
+                // "--ros"
             ],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}",

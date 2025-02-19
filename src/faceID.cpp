@@ -1,4 +1,5 @@
 #include "scrfd_cuda.h"
+#include "simple_yolo_cuda.h"
 
 #include <dirent.h>
 #include <sys/types.h>
@@ -197,7 +198,7 @@ int main(int argc,char* argv[])
     {
         show_flag = true;
     }
-    LOG(INFO) << "----------engine start!----------";
+    LOG(INFO) << "----------scrfd engine start!----------";
     std::shared_ptr<IScrfd> engine = IScrfdManager::create();
     engine->SetPrecision(inference_mode);
     engine->SetDeviceID(deviceid);
@@ -207,6 +208,27 @@ int main(int argc,char* argv[])
     engine->SetMaxWorkspace(max_workspace * 1024 *1024 *1024);//接口输入的单位是byte，转换为GB
 
     engine->Init(onnx_file,compile_flag,confidence_threshold, nms_threshold);
+
+
+    LOG(INFO) << "----------yolo-pose engine start!----------";
+    YoloGpu::IYolo::Mode inference_mode_yolo = YoloGpu::IYolo::Mode::FP32;
+    if(cmd_parser.exist("fp16"))
+    {
+        inference_mode_yolo = YoloGpu::IYolo::Mode::FP16;
+    }
+    if(cmd_parser.exist("int8"))
+    {
+        inference_mode_yolo = YoloGpu::IYolo::Mode::INT8;
+    }
+    std::shared_ptr<YoloGpu::IYolo> engine_yolo = YoloGpu::IYoloManager::create();
+    engine_yolo->SetPrecision(inference_mode_yolo);
+    engine_yolo->SetDeviceID(deviceid);
+    engine_yolo->SetBatchSize(test_batch_size);
+    engine_yolo->SetCalibrationPath(calibration_path);
+    engine_yolo->SetCalibrationCachePath(calibration_cache_path);
+    engine_yolo->SetMaxWorkspace(max_workspace * 1024 *1024 *1024);//接口输入的单位是byte，转换为GB
+
+    engine_yolo->Init("./weights/yolov11m-pose.engine",compile_flag,confidence_threshold, nms_threshold);
     // engine->Init(onnx_file,1);
     LOG(INFO) << "----------engine init!----------";
     Json::Value root;
@@ -469,8 +491,22 @@ int main(int argc,char* argv[])
                 {
                     cv::resize(bgr_image,bgr_image,cv::Size(resize_vect[0],resize_vect[1]));
                 }
-                boxes_future = engine->Inference(bgr_image);
+
+
+                cv::Mat image_yolo = cv::imread(files[i]);
+                if (image_yolo.empty()) {  // use the file name to search the photo
+                    std::cout<<"No Picture found: "<< files[i] << std::endl;
+                    return -1;
+                }
+                cv::cuda::GpuMat bgr_image_yolo;
+                bgr_image_yolo.upload(image_yolo);
+                boxes_future = engine->Inference(bgr_image_yolo);
                 auto boxes = boxes_future.get();
+
+                std::shared_future<YoloGpu::IYolo::BoxArray> boxes_future_yolo;
+                boxes_future_yolo = engine_yolo->Inference(bgr_image);
+                auto boxes_yolo = boxes_future_yolo.get();
+
                 float used_time = (timestamp_now_float() - begin_timer);
                 all_used_time += used_time;
                 float inference_average_time = all_used_time / ((count+1) * 1.0);
@@ -511,7 +547,37 @@ int main(int argc,char* argv[])
                             // 绘制关键点为小圆点  
                             cv::circle(show_image, cv::Point(x, y), 3, cv::Scalar(b, g, r), -1); // 半径为3，填充颜色  
                         }  
-                    }                    
+                    }
+
+                    for(auto& obj : boxes_yolo)
+                    {
+                        uint8_t b, g, r;
+                        std::tie(b, g, r) = random_color(1);
+                        cv::rectangle(show_image, cv::Point(obj.left, obj.top), cv::Point(obj.right, obj.bottom), cv::Scalar(b, g, r), 2);
+                        // Json::Value bbox;
+                        // bbox.append(obj.left);
+                        // bbox.append(obj.top);
+                        // bbox.append(obj.right);
+                        // bbox.append(obj.bottom);
+                        // bbox.append(obj.confidence);
+                        // // bbox.append(obj.class_label);
+                        // bboxes.append(bbox);
+                        // // std::string name    = std::to_string(obj.class_label);
+                        // // auto caption = cv::format("%s %.2f", name.c_str(), obj.confidence);
+                        // auto caption = cv::format("%.2f", obj.confidence);
+                        // int width    = cv::getTextSize(caption, 0, 1, 2, nullptr).width + 10;
+                        // cv::rectangle(show_image, cv::Point(obj.left-3, obj.top-33), cv::Point(obj.left + width, obj.top), cv::Scalar(b, g, r), -1);
+                        // cv::putText(show_image, caption, cv::Point(obj.left, obj.top-5), 0, 1, cv::Scalar::all(0), 2, 16);
+
+                        // 绘制关键点  
+                        for (const auto& keypoint : obj.keypoints)  
+                        {  
+                            float x = keypoint.point.x;  
+                            float y = keypoint.point.y;  
+                            // 绘制关键点为小圆点  
+                            cv::circle(show_image, cv::Point(x, y), 3, cv::Scalar(b, g, r), -1); // 半径为3，填充颜色  
+                        }  
+                    }                     
                     cv::namedWindow("detection_result",cv::WINDOW_NORMAL);
                     cv::imshow("detection_result",show_image);
                     cv::waitKey(1);

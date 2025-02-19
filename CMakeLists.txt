@@ -128,7 +128,9 @@ cuda_add_library(scrfd_cuda SHARED ${PROJECT_SOURCE_DIR}/src/scrfd_cuda.cu)
 target_link_libraries(scrfd_cuda ${TRT_LIBS} ${OpenCV_LIBS} ${catkin_LIBRARIES})
 SET_TARGET_PROPERTIES (scrfd_cuda PROPERTIES VERSION "${_app_version_}")
 
-
+cuda_add_library(simple_yolo_cuda SHARED ${PROJECT_SOURCE_DIR}/src/simple_yolo_cuda.cu)
+target_link_libraries(simple_yolo_cuda ${TRT_LIBS} ${OpenCV_LIBS} ${catkin_LIBRARIES})
+SET_TARGET_PROPERTIES (simple_yolo_cuda PROPERTIES VERSION "${_app_version_}")
 # add_executable(yolo_test src/yolo_test.cpp)
 # target_link_libraries(yolo_test  scrfd
 #                                 ${OpenCV_LIBS}
@@ -141,6 +143,7 @@ target_link_libraries(faceID  scrfd_cuda
                                 jsoncpp
                                 glog
                                 pthread
+                                simple_yolo_cuda
                                 )
 
 # # ROS-Specific Targets [ADDED]  
