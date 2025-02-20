@@ -3,7 +3,7 @@
 #include "tool.hpp"
 #include <gtest/gtest.h>
 
-using namespace MatrixRobotVisionGpu;
+using namespace ScrfdGpu
 
 TEST(ScrfdTest, SingleBatchGpu)
 {

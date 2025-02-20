@@ -1,10 +1,7 @@
-build/
-workspace/yolo_gpu_test
-workspace/yolo_test
-lib/libscrfd.so
-lib/libscrfd.so.
-lib/libscrfd_cuda.so
-lib/libscrfd_cuda.so.
-lib/*.so
-lib/*.so.*
+build/*
 workspace/*
+lib/*
+workspace/*
+.vscode/*
+weight/*
+

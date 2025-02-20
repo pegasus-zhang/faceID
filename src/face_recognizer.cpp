@@ -13,7 +13,7 @@ int FaceRecognizer::Init(std::string database_path, float det_thresh, float rec_
 {
     det_thresh_ = det_thresh;
     rec_thresh_ = rec_thresh;
-    face_detector_ = MatrixRobotVisionGpu::IScrfdManager::create();
+    face_detector_ = ScrfdGpu::IScrfdManager::create();
     face_detector_->Init("/home/jetson/workspace/faceID_jzb/weights/det_10g.onnx",
                          false,det_thresh_);
     face_feature_ = GeelyRobotVisionGpu::IFaceFeatureManager::create();
@@ -28,7 +28,7 @@ int FaceRecognizer::Init(std::string database_path, float det_thresh, float rec_
     return 0; // 返回0表示成功
 }
 
-int FaceRecognizer::CropFacesAlignment(const cv::cuda::GpuMat& img, const MatrixRobotVisionGpu::IScrfd::BoxArray& boxes, std::vector<cv::cuda::GpuMat>& aligned_faces)
+int FaceRecognizer::CropFacesAlignment(const cv::cuda::GpuMat& img, const ScrfdGpu::IScrfd::BoxArray& boxes, std::vector<cv::cuda::GpuMat>& aligned_faces)
 {
     // 裁剪和对齐人脸
     std::vector<std::vector<cv::Point2f>> all_landmarks;
@@ -76,7 +76,7 @@ int FaceRecognizer::ExtractFeature(const std::vector<cv::cuda::GpuMat>& aligned_
 int FaceRecognizer::DetectExtractFeature(const cv::cuda::GpuMat& img, FaceInfo& face_info)
 {
     // 检测人脸并提取特征
-    MatrixRobotVisionGpu::IScrfd::BoxArray boxes;
+    ScrfdGpu::IScrfd::BoxArray boxes;
     boxes = face_detector_->Inference(img).get();
     if (0 == boxes.size())
     {

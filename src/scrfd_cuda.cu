@@ -31,7 +31,7 @@
 #   include <stdarg.h>
 #endif
 
-namespace MatrixRobotVisionGpu
+namespace ScrfdGpu
 {
 
     using namespace nvinfer1;
