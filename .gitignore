@@ -5,3 +5,6 @@ lib/libscrfd.so
 lib/libscrfd.so.
 lib/libscrfd_cuda.so
 lib/libscrfd_cuda.so.
+lib/libsimple_yolo_cuda.so.
+lib/libsimple_yolo_cuda.so
+.vscode/

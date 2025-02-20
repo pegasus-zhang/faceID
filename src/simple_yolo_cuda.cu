@@ -1925,17 +1925,17 @@ namespace YoloGpu
     >;
 
 
-IYolo::BoxArray parseYoloOutput(float* image_based_output, int num_predictions, int num_keypoints, float confidence_threshold) 
+IYolo::BoxArray parseYoloOutput(float* image_based_output, int num_predictions, int num_keypoints, float confidence_threshold,float* d2i) 
 {  
     IYolo::BoxArray boxes;  
 
     // 遍历每个预测框  
     for (int i = 0; i < num_predictions; ++i) {  
         // 提取边界框信息  
-        float left = image_based_output[i + 0];  
-        float top = image_based_output[i + 8400*1];  
-        float right = image_based_output[i + 8400*2];  
-        float bottom = image_based_output[i  + 8400*3];  
+        float x = image_based_output[i + 0];  
+        float y = image_based_output[i + 8400*1];  
+        float w = image_based_output[i + 8400*2];  
+        float h = image_based_output[i  + 8400*3];  
         float confidence = image_based_output[i  + 8400*4];  
 
         // 如果置信度低于阈值，则跳过该框  
@@ -1943,17 +1943,31 @@ IYolo::BoxArray parseYoloOutput(float* image_based_output, int num_predictions, 
             continue;  
         }  
 
+        float left = x-w/2;  
+        float top = y-h/2;  
+        float right = x+w/2;  
+        float bottom = y+h/2;  
+
+
+
+        float left_img = left*d2i[0]+top*d2i[1]+d2i[2];  
+        float top_img = left*d2i[3]+top*d2i[4]+d2i[5];  
+        float right_img = right*d2i[0]+bottom*d2i[1]+d2i[2];
+        float bottom_img = right*d2i[3]+bottom*d2i[4]+d2i[5];
+
         // 提取关键点信息  
         std::vector<IYolo::Box::Keypoint> keypoints;  
         for (int j = 0; j < num_keypoints; ++j) {  
             float x = image_based_output[i + (5 + j * 3 + 0)*8400];  
             float y = image_based_output[i + (5 + j * 3 + 1)*8400];  
+            float x_img = x*d2i[0]+y*d2i[1]+d2i[2]; 
+            float y_img = x*d2i[3]+y*d2i[4]+d2i[5];
             float kp_confidence = image_based_output[i + (5 + j * 3 + 2)*8400];  
-            keypoints.emplace_back(cv::Point2f(x, y), kp_confidence);  
+            keypoints.emplace_back(cv::Point2f(x_img, y_img), kp_confidence);  
         }  
 
         // 创建 Box 对象并添加到结果中  
-        boxes.emplace_back(left, top, right, bottom, confidence, keypoints);  
+        boxes.emplace_back(left_img, top_img, right_img, bottom_img, confidence, keypoints);  
     }  
 
     return boxes;  
@@ -2085,7 +2099,7 @@ IYolo::BoxArray applyNMS(const IYolo::BoxArray& boxes, float iou_threshold) {
                 engine->forward(false);
                 float* image_based_output = static_cast<float*>(engine->output(0)->to_cpu(true).get_data()->cpu());
                 // 解析推理结果  
-                IYolo::BoxArray boxes = parseYoloOutput(image_based_output, num_predictions, num_keypoints, confidence_threshold);  
+                IYolo::BoxArray boxes = parseYoloOutput(image_based_output, num_predictions, num_keypoints, confidence_threshold, fetch_jobs[0].additional.d2i);  
 
                 // 应用 NMS  
                 IYolo::BoxArray final_boxes = applyNMS(boxes, iou_threshold); 

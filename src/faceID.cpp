@@ -403,6 +403,11 @@ int main(int argc,char* argv[])
             }
             boxes_future = engine->Inference(bgr_image);
             auto boxes = boxes_future.get();
+
+            std::shared_future<YoloGpu::IYolo::BoxArray> boxes_future_yolo;
+            boxes_future_yolo = engine_yolo->Inference(bgr_image);
+            auto boxes_yolo = boxes_future_yolo.get();
+
             float used_time = (timestamp_now_float() - begin_timer);
             all_used_time += used_time;
             float inference_average_time = all_used_time / ((count+1) * 1.0);
@@ -443,7 +448,23 @@ int main(int argc,char* argv[])
                         // 绘制关键点为小圆点  
                         cv::circle(show_image, cv::Point(x, y), 3, cv::Scalar(b, g, r), -1); // 半径为3，填充颜色  
                     }  
-                }                    
+                } 
+
+                for(auto& obj : boxes_yolo)
+                {
+                    uint8_t b, g, r;
+                    std::tie(b, g, r) = random_color(1);
+                    cv::rectangle(show_image, cv::Point(obj.left, obj.top), cv::Point(obj.right, obj.bottom), cv::Scalar(b, g, r), 2);
+                
+                    // 绘制关键点  
+                    for (const auto& keypoint : obj.keypoints)  
+                    {  
+                        float x = keypoint.point.x;  
+                        float y = keypoint.point.y;  
+                        // 绘制关键点为小圆点  
+                        cv::circle(show_image, cv::Point(x, y), 3, cv::Scalar(b, g, r), -1); // 半径为3，填充颜色  
+                    }  
+                }                      
                 cv::namedWindow("detection_result",cv::WINDOW_NORMAL);
                 cv::imshow("detection_result",show_image);
                 cv::waitKey(1);
@@ -492,15 +513,7 @@ int main(int argc,char* argv[])
                     cv::resize(bgr_image,bgr_image,cv::Size(resize_vect[0],resize_vect[1]));
                 }
 
-
-                cv::Mat image_yolo = cv::imread(files[i]);
-                if (image_yolo.empty()) {  // use the file name to search the photo
-                    std::cout<<"No Picture found: "<< files[i] << std::endl;
-                    return -1;
-                }
-                cv::cuda::GpuMat bgr_image_yolo;
-                bgr_image_yolo.upload(image_yolo);
-                boxes_future = engine->Inference(bgr_image_yolo);
+                boxes_future = engine->Inference(bgr_image);
                 auto boxes = boxes_future.get();
 
                 std::shared_future<YoloGpu::IYolo::BoxArray> boxes_future_yolo;
