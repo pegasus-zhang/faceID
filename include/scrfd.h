@@ -11,7 +11,7 @@
 #include <future>
 #include <opencv2/opencv.hpp>
 
-namespace MatrixRobotVision
+namespace Scrfd
 {
     class IScrfd
     {
@@ -54,6 +54,6 @@ namespace MatrixRobotVision
            static std::shared_ptr<IScrfd> create(); 
     };
 
-}; // namespace MatrixRobotVision
+}; // namespace Scrfd
 
 #endif // SIMPLE_YOLO_HPP

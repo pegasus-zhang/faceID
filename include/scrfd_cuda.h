@@ -15,7 +15,7 @@
 #include <opencv2/cudawarping.hpp>
 #include <opencv2/core/opengl.hpp>
 
-namespace MatrixRobotVisionGpu
+namespace ScrfdGpu
 {
     class IScrfd
     {
@@ -60,6 +60,6 @@ namespace MatrixRobotVisionGpu
 
 
 
-}; // namespace MatrixRobotVisionGpu
+}; // namespace ScrfdGpu
 
 #endif // SCRFD_CUDA_HPP
