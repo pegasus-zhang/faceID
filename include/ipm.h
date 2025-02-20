@@ -3,6 +3,9 @@
 
 #include <opencv2/opencv.hpp>
 #include <vector>
+#include "json.hpp"
+#include <fstream>
+
 class ImageUndistort {
 public:
     cv::Mat cameraMatrix_, distCoeffs_;
@@ -28,12 +31,17 @@ public:
         const int image_width,
         const int image_height);
     
-    cv::Point3f getTargetPointsCamera(const std::vector<cv::Point2f>& referencePointImg,
+    int getTargetPointsCamera(const std::vector<cv::Point2f>& referencePointImg,
                                       const std::vector<cv::Point3f>& referencePointCamera,
-                                      const std::vector<cv::Point2f>& targetPointImg);
+                                      const std::vector<cv::Point2f>& targetPointImg,
+                                      std::vector<cv::Point3f>& targetPointCamera);
     
-    cv::Point3f get3DPos(const std::vector<cv::Point2f>& targetPointImg);
+    int get3DPos(const std::vector<cv::Point2f>& targetPointImg,std::vector<cv::Point3f>& targetPointCamera);
 };
+
+cv::Mat jsonToCvMat(const nlohmann::json& j, int rows, int cols,int dim);  
+std::vector<cv::Point2f> jsonToPoints2f(const nlohmann::json& j); 
+std::vector<cv::Point3f> jsonToPoints3f(const nlohmann::json& j);
 
 #endif // IPM_H
 

@@ -1,9 +1,9 @@
 #include "ipm.h"
-#include "json.hpp"
-#include <fstream>
+
 using json = nlohmann::json;
 
-cv::Mat jsonToCvMat(const json& j, int rows, int cols,int dim=1) {
+cv::Mat jsonToCvMat(const json& j, int rows, int cols,int dim=1) 
+{
     std::vector<double> data;
     if(1 == dim)
     {
@@ -22,7 +22,8 @@ cv::Mat jsonToCvMat(const json& j, int rows, int cols,int dim=1) {
     return cv::Mat(rows, cols, CV_64F, data.data()).clone();
 }
 
-std::vector<cv::Point2f> jsonToPoints2f(const json& j) {
+std::vector<cv::Point2f> jsonToPoints2f(const json& j) 
+{
     std::vector<cv::Point2f> points;
     for (const auto& p : j) {
         points.emplace_back(p[0], p[1]);
@@ -30,7 +31,8 @@ std::vector<cv::Point2f> jsonToPoints2f(const json& j) {
     return points;
 }
 
-std::vector<cv::Point3f> jsonToPoints3f(const json& j) {
+std::vector<cv::Point3f> jsonToPoints3f(const json& j) 
+{
     std::vector<cv::Point3f> points;
     for (const auto& p : j) {
         points.emplace_back(p[0], p[1], p[2]);
@@ -65,24 +67,32 @@ IPM::IPM(const std::vector<cv::Point2f>& calibratePointsPixel,
       perspectiveMatrix(perspectiveMatrix),
       undistortImage(cameraMatrix, distCoeffs,image_width,image_height) {}
 
-cv::Point3f IPM::getTargetPointsCamera(const std::vector<cv::Point2f>& referencePointImg,
+int IPM::getTargetPointsCamera(const std::vector<cv::Point2f>& referencePointImg,
                                        const std::vector<cv::Point3f>& referencePointCamera,
-                                       const std::vector<cv::Point2f>& targetPointImg) {
-    float dx = (targetPointImg[0].x - referencePointImg[0].x) /
+                                       const std::vector<cv::Point2f>& targetPointImg,
+                                       std::vector<cv::Point3f>& targetPointCamera) 
+{
+    int size = targetPointImg.size();
+    targetPointCamera.resize(size);
+    for(size_t i = 0;i<size;i++)
+    {
+        float dx = (targetPointImg[i].x - referencePointImg[0].x) /
                (referencePointImg[3].x - referencePointImg[0].x);
-    float dy = (targetPointImg[0].y - referencePointImg[0].y) /
-               (referencePointImg[3].y - referencePointImg[0].y);
+        float dy = (targetPointImg[i].y - referencePointImg[0].y) /
+                (referencePointImg[3].y - referencePointImg[0].y);
+        
+        cv::Point3f f_xy1 = referencePointCamera[0] * (1 - dx) + referencePointCamera[1] * dx;
+        cv::Point3f f_xy2 = referencePointCamera[2] * (1 - dx) + referencePointCamera[3] * dx;
+        cv::Point3f target = f_xy1 * (1 - dy) + f_xy2 * dy;
+        targetPointCamera[i] = target;
+    }
     
-    cv::Point3f f_xy1 = referencePointCamera[0] * (1 - dx) + referencePointCamera[1] * dx;
-    cv::Point3f f_xy2 = referencePointCamera[2] * (1 - dx) + referencePointCamera[3] * dx;
-    cv::Point3f targetPointCamera = f_xy1 * (1 - dy) + f_xy2 * dy;
-    
-    return targetPointCamera;
+    return 0;
 }
 
-cv::Point3f IPM::get3DPos(const std::vector<cv::Point2f>& targetPointImg) {
+int IPM::get3DPos(const std::vector<cv::Point2f>& targetPointImg,std::vector<cv::Point3f>& targetPointsCamera) {
     if (targetPointImg.empty()) {
-        return cv::Point3f(-1, -1, -1);
+        return -1;
     }
     
     std::vector<cv::Point2f> targetPointImgUndistorted = undistortImage.undistortPoints(targetPointImg);
@@ -93,7 +103,7 @@ cv::Point3f IPM::get3DPos(const std::vector<cv::Point2f>& targetPointImg) {
         pt = cv::Point2f(static_cast<int>(pt.x), static_cast<int>(pt.y));
     }
 
-    return getTargetPointsCamera(calibratePointsPixel, calibratePointsCamera, targetPointImgUndistortedTransformed);
+    return getTargetPointsCamera(calibratePointsPixel, calibratePointsCamera, targetPointImgUndistortedTransformed,targetPointsCamera);
 }
 
 #include <iostream>
@@ -133,9 +143,10 @@ int main(int argc,char* argv[]) {
     IPM ipm(calibratePointsPixel, calibratePointsCamera, perspectiveMatrix, cameraMatrix, distCoeffs,image_width, image_height);
     
     std::vector<cv::Point2f> targetPointImg = { {963, 811} };
-    cv::Point3f targetPointCamera = ipm.get3DPos(targetPointImg);
+    std::vector<cv::Point3f> targetPointCamera;
+    ipm.get3DPos(targetPointImg,targetPointCamera);
     
-    std::cout << "Target Point in Camera Coordinates: (" << targetPointCamera.x << ", " 
-              << targetPointCamera.y << ", " << targetPointCamera.z << ")" << std::endl;
+    std::cout << "Target Point in Camera Coordinates: (" << targetPointCamera[0].x << ", " 
+              << targetPointCamera[0].y << ", " << targetPointCamera[0].z << ")" << std::endl;
     return 0;
 }

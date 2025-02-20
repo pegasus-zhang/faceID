@@ -1,5 +1,5 @@
 #include "face_recognizer.h"
-
+#include<fstream>
 FaceRecognizer::FaceRecognizer()  
 {
 }
@@ -11,6 +11,7 @@ FaceRecognizer::~FaceRecognizer()
 
 int FaceRecognizer::Init(nlohmann::json config)
 {
+    config_ = config;
     face_detector_ = ScrfdGpu::IScrfdManager::create();
     face_detector_->Init("/home/jetson/workspace/faceID_jzb/weights/det_10g.onnx",
                          false,config["model_parameter"]["face_detector"]["confidence_threshold"]);
@@ -23,6 +24,18 @@ int FaceRecognizer::Init(nlohmann::json config)
     
     face_register_ = std::make_shared<FaceRegister>();
     face_register_->Init(config["database_path"]);
+    // 读取 JSON 文件
+    std::string name2id_path = config["name2id_path"];
+    std::ifstream file(name2id_path.c_str());
+    if (!file.is_open()) {
+        std::cerr << "Failed to open file." << std::endl;
+        return -1; // 返回-1表示失败
+    }
+    // 将 JSON 文件内容解析到 JSON 对象中
+    nlohmann::json name2id_dic;
+    file >> name2id_dic;
+    file.close();
+    SetName2IDDict(name2id_dic);
 
     return 0; // 返回0表示成功
 }
@@ -98,4 +111,13 @@ int FaceRecognizer::DetectFace(const cv::cuda::GpuMat& img, FaceInfo& face_info)
     }
     ret = face_register_->SearchFace(face_info.features,config_["model_parameter"]["face_feature"]["confidence_threshold"], face_info.face_ids, face_info.scores);
     return ret; // 返回0表示成功
+}
+int FaceRecognizer::SetName2IDDict(const nlohmann::json& name2id_dic) {
+    name2id_dic_ = name2id_dic;
+    return 0; // 返回0表示成功
+}
+
+int FaceRecognizer::GetName2IDDict(nlohmann::json& name2id_dic) {
+    name2id_dic = name2id_dic_;
+    return 0; // 返回0表示成功
 }

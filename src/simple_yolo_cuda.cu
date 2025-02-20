@@ -2104,15 +2104,15 @@ IYolo::BoxArray applyNMS(const IYolo::BoxArray& boxes, float iou_threshold) {
                 // 应用 NMS  
                 IYolo::BoxArray final_boxes = applyNMS(boxes, iou_threshold); 
 
-                // 输出解析结果  
-                for (const auto& box : final_boxes) {  
-                    std::cout << "Box: [" << box.left << ", " << box.top << ", " << box.right << ", " << box.bottom << "]\n";  
-                    std::cout << "Confidence: " << box.confidence << "\n";  
-                    std::cout << "Keypoints:\n";  
-                    for (const auto& kp : box.keypoints) {  
-                        std::cout << "  (" << kp.point.x << ", " << kp.point.y << "), confidence: " << kp.confidence << "\n";  
-                    }  
-                }  
+                // // 输出解析结果  
+                // for (const auto& box : final_boxes) {  
+                //     std::cout << "Box: [" << box.left << ", " << box.top << ", " << box.right << ", " << box.bottom << "]\n";  
+                //     std::cout << "Confidence: " << box.confidence << "\n";  
+                //     std::cout << "Keypoints:\n";  
+                //     for (const auto& kp : box.keypoints) {  
+                //         std::cout << "  (" << kp.point.x << ", " << kp.point.y << "), confidence: " << kp.confidence << "\n";  
+                //     }  
+                // }  
                 // output_array_device.to_gpu(false);
                 // for(int ibatch = 0; ibatch < infer_batch_size; ++ibatch){
                     

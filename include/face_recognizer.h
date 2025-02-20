@@ -24,9 +24,12 @@ public:
     int ExtractFeature(const std::vector<cv::cuda::GpuMat>& aligned_faces, cv::cuda::GpuMat& features);
     int DetectExtractFeature(const cv::cuda::GpuMat& img,FaceInfo& face_info);
     int DetectFace(const cv::cuda::GpuMat& img,FaceInfo& face_info);
+    int SetName2IDDict(const nlohmann::json& name2id_dic);
+    int GetName2IDDict(nlohmann::json& name2id_dic);
 private:
     nlohmann::json config_;
     std::shared_ptr<ScrfdGpu::IScrfd> face_detector_ = nullptr;
     std::shared_ptr<GeelyRobotVisionGpu::IFaceFeature> face_feature_ = nullptr;
     std::shared_ptr<FaceRegister> face_register_ = nullptr;
+    nlohmann::json name2id_dic_;
 };

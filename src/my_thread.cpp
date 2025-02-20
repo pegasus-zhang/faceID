@@ -11,6 +11,7 @@ MyThread::~MyThread() {
 
 void MyThread::start() {
     worker_ = std::thread(&MyThread::run, this);
+    std::cout << "Thread started." << std::endl;
 }
 
 void MyThread::stop() {

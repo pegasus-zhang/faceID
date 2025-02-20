@@ -49,7 +49,9 @@ if(ENABLE_ROS1)
     find_package(catkin REQUIRED COMPONENTS  
         roscpp
         rosconsole  
-        sensor_msgs  
+        sensor_msgs
+        cv_bridge
+        image_transport  
     )  
     include_directories(${catkin_INCLUDE_DIRS})  
     link_directories(${catkin_LIBRARY_DIRS}) 
@@ -125,8 +127,8 @@ endif()
 # TensorRT
 
 
-# set(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} -std=c++11 -Wall -O0 -Wfatal-errors -pthread -w -g")
-# set(CUDA_NVCC_FLAGS "${CUDA_NVCC_FLAGS} -std=c++11 -O0 -Xcompiler -fPIC -g -w ${CUDA_GEN_CODE}")
+set(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} -std=c++11 -Wall -O0 -Wfatal-errors -pthread -w -g")
+set(CUDA_NVCC_FLAGS "${CUDA_NVCC_FLAGS} -std=c++11 -O0 -Xcompiler -fPIC -g -w ${CUDA_GEN_CODE}")
 
 cuda_add_library(scrfd SHARED ${PROJECT_SOURCE_DIR}/src/scrfd.cu)
 target_link_libraries(scrfd ${TRT_LIBS} ${OpenCV_LIBS} )
@@ -173,31 +175,34 @@ add_library(ros_adapter SHARED ${PROJECT_SOURCE_DIR}/src/ros_adapter.cpp)
 target_link_libraries(ros_adapter pthread ${OpenCV_LIBS} ${catkin_LIBRARIES})
 SET_TARGET_PROPERTIES (ros_adapter PROPERTIES VERSION "${_app_version_}")
 
+add_library(ipm SHARED src/ipm.cpp)
+target_link_libraries(ipm   ${OpenCV_LIBS}           
+                                )  
+                                
+SET_TARGET_PROPERTIES (ros_adapter PROPERTIES VERSION "${_app_version_}")
+
 add_library(face_id_thread SHARED src/face_id_thread.cpp)
 target_link_libraries(face_id_thread   face_recognizer
+                                            simple_yolo_cuda
+                                            ipm
                                             ros_adapter
                                             mythread 
                                             ${catkin_LIBRARIES}
                                             pthread
-                                            glog                            
+                                            glog 
+                                                                       
                                 ) 
 SET_TARGET_PROPERTIES (face_id_thread PROPERTIES VERSION "${_app_version_}")
 
-add_executable(face_id_thread_test src/face_id_thread.cpp)
-target_link_libraries(face_id_thread_test   face_recognizer
-                                            ros_adapter
-                                            mythread 
-                                            ${catkin_LIBRARIES}
-                                            pthread
-                                            glog
-                                            
-                                )                                 
+# add_executable(face_id_thread_test src/face_id_thread.cpp)
+# target_link_libraries(face_id_thread_test   face_id_thread      
+#                                 )                                 
 
 
-add_executable(face_matcher_test  src/face_matcher_test.cpp)
-target_link_libraries(face_matcher_test  face_matcher 
-                                glog
-                                ) 
+# add_executable(face_matcher_test  src/face_matcher_test.cpp)
+# target_link_libraries(face_matcher_test  face_matcher 
+#                                 glog
+#                                 ) 
 
 cuda_add_library(simple_yolo_cuda SHARED ${PROJECT_SOURCE_DIR}/src/simple_yolo_cuda.cu)
 target_link_libraries(simple_yolo_cuda ${TRT_LIBS} ${OpenCV_LIBS} ${catkin_LIBRARIES})
@@ -209,6 +214,14 @@ SET_TARGET_PROPERTIES (simple_yolo_cuda PROPERTIES VERSION "${_app_version_}")
 #                                 glog 
 #                                 )
 
+add_library(cmd_listener SHARED src/cmd_listener.cpp src/myPinyin.cpp)
+target_link_libraries(cmd_listener  face_id_thread
+                                    glog
+                                    ${catkin_LIBRARIES}                                        
+                                )                                 
+SET_TARGET_PROPERTIES (cmd_listener PROPERTIES VERSION "${_app_version_}")
+
+
 add_executable(faceID src/faceID.cpp)
 target_link_libraries(faceID  scrfd_cuda
                                 jsoncpp
@@ -217,28 +230,22 @@ target_link_libraries(faceID  scrfd_cuda
                                 ros_adapter
                                 simple_yolo_cuda
                                 )
-add_executable(face_feature_test src/face_feature_test.cpp)
-target_link_libraries(face_feature_test  face_feature
-                                glog
-                                )       
-add_executable(face_recognizer_test src/face_recognizer_test.cpp)
-target_link_libraries(face_recognizer_test   face_recognizer 
-                                            glog
-                                )     
-add_executable(mythread_test src/my_thread.cpp)
-target_link_libraries(mythread_test   pthread
-                                )                                 
-add_executable(ipm_test src/ipm.cpp)
-target_link_libraries(ipm_test   ${OpenCV_LIBS}
-                                            
-                                )                                 
-add_executable(cmd_listener src/cmd_listener.cpp src/myPinyin.cpp)
-target_link_libraries(cmd_listener  face_id_thread
-                                    glog
-                                    ${catkin_LIBRARIES} 
-                                            
-                                )                                 
-add_executable(myPinyin_test src/main.cpp src/myPinyin.cpp)
+# add_executable(face_feature_test src/face_feature_test.cpp)
+# target_link_libraries(face_feature_test  face_feature
+#                                 glog
+#                                 )       
+# add_executable(face_recognizer_test src/face_recognizer_test.cpp)
+# target_link_libraries(face_recognizer_test   face_recognizer 
+#                                             glog
+#                                 )     
+# add_executable(mythread_test src/my_thread.cpp)
+# target_link_libraries(mythread_test   pthread
+#                                 )                                 
+# add_executable(ipm_test src/ipm.cpp)
+# target_link_libraries(ipm_test   ${OpenCV_LIBS}           
+#                                 )                                 
+add_executable(face_id_app src/main.cpp )
+target_link_libraries(face_id_app cmd_listener)
                                                                 
 # # ROS-Specific Targets [ADDED]  
 # if(DEFINED ENV{ROS_VERSION})  
@@ -252,55 +259,6 @@ add_executable(myPinyin_test src/main.cpp src/myPinyin.cpp)
 #     ament_target_dependencies(yolo_ros2_node rclcpp std_msgs) # [ADDED]  
 # endif()  
 # endif() 
-
-# gtest
-if(GTEST_OPTION)
-    message(STATUS "GTEST_OPTION ON.")
-    enable_testing()
-
-    find_package(GTest REQUIRED)
-    Message(STATUS "--------------------------------------")
-    include_directories(${GTEST_INCLUDE_DIRS})
-    add_executable(sample1_unittest samples/sample1_unittest.cpp)
-    target_link_libraries(sample1_unittest gtest gtest_main pthread scrfd_cuda ${OpenCV_LIBS})
-
-    add_executable(sample2_unittest samples/sample2_unittest.cpp)
-    target_link_libraries(sample2_unittest gtest gtest_main pthread scrfd ${OpenCV_LIBS})
-    
-    include(GoogleTest)
-    gtest_discover_tests(sample1_unittest sample2_unittest)
-else()
-    message(STATUS "GTEST_OPTION OFF.")
-endif()
-
-#安装信息
-IF(DEFINED _install_root_path_ AND NOT "${_install_root_path_}" STREQUAL "")
-    # 宏定义不为空的处理逻辑
-    set(CMAKE_INSTALL_PREFIX ${_install_root_path_})
-ELSE()
-    # 宏定义为空的处理逻辑scrfd
-    set(CMAKE_INSTALL_PREFIX "/opt/opt_control/")
-ENDIF()
-if(GTEST_OPTION)
-    install(TARGETS sample1_unittest sample2_unittest DESTINATION bin/scrfd)
-endif()
-install(TARGETS scrfd_cuda scrfd DESTINATION lib/scrfd)
-install(FILES include/scrfd_cuda.h include/scrfd.h DESTINATION include/scrfd)
-
-#cmake install
-install(FILES
-        cmake/scrfdConfig.cmake
-        cmake/scrfdConfigVersion.cmake
-        DESTINATION lib/cmake/scrfd)
-
-# Create an uninstall target (optional)
-add_custom_target(uninstall
-    COMMAND ${CMAKE_COMMAND} -E remove_directory "${CMAKE_INSTALL_PREFIX}/lib/scrfd"
-    COMMAND ${CMAKE_COMMAND} -E remove_directory "${CMAKE_INSTALL_PREFIX}/include/scrfd"
-    COMMAND ${CMAKE_COMMAND} -E remove_directory "${CMAKE_INSTALL_PREFIX}/bin/scrfd"
-    COMMAND ${CMAKE_COMMAND} -E remove_directory "${CMAKE_INSTALL_PREFIX}/lib/cmake/scrfd"
-    COMMENT "Uninstalling ScrfdV8"
-)
 
 # ROS2 Install [ADDED]  
 if(DEFINED ENV{ROS_VERSION} AND $ENV{ROS_VERSION} EQUAL 2) # [ADDED]  
