@@ -72,6 +72,7 @@ namespace YoloGpu
            static std::shared_ptr<IYolo> create(); 
     };
 
-}; // namespace MatrixRobotVisionGpu
+}; //namespace YoloGpu
+
 
 #endif // SIMPLE_YOLO_CUDA_HPP

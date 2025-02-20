@@ -31,7 +31,7 @@
 #   include <stdarg.h>
 #endif
 
-namespace MatrixRobotVision
+namespace Scrfd
 {
 
     using namespace nvinfer1;

@@ -23,7 +23,7 @@
 #include <sensor_msgs/CompressedImage.h>
 #endif
 
-namespace MatrixRobotVisionGpu
+namespace ScrfdGpu
 {
     class IScrfd
     {
@@ -195,6 +195,6 @@ namespace MatrixRobotVisionGpu
     #endif  
 
 
-}; // namespace MatrixRobotVisionGpu
+}; // namespace ScrfdGpu
 
 #endif // SCRFD_CUDA_HPP
