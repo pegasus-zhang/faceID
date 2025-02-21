@@ -17,7 +17,7 @@ private:
     std::shared_ptr<IPM> ipm_ = nullptr;
     nlohmann::json config_;
     std::string host_name_="";
-    bool print_flag_ = false;
+    std::atomic<bool> print_flag_{false};
     std::mutex mutex_;
     ros::Publisher pub_;
     ros::Publisher pub_img_;

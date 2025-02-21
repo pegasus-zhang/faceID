@@ -39,12 +39,7 @@ void FaceDetectThread::run()
         ros_adapter_->GetImage(gpu_frame);
         // 检测人脸并提取特征
         FaceInfo face_infos;
-        int ret = face_recognizer_->DetectFace(gpu_frame, face_infos);
-        if (ret != 0)
-        {
-            std::cerr << "Error: No face detected." << std::endl;
-            continue;
-        }   
+        face_recognizer_->DetectFace(gpu_frame, face_infos);
         YoloGpu::IYolo::BoxArray body_bbox = body_detector_->Inference(gpu_frame).get();
         int width = config_["camera_parameter"]["image_size"][0];   // 获取宽度
         int height = config_["camera_parameter"]["image_size"][1];  // 获取高度
@@ -137,7 +132,10 @@ void FaceDetectThread::run()
         num_all++;
         all_used_times += used_time;
         used_times_mean = all_used_times / num_all;
-        ROS_INFO("Used time: %.4f, Mean time: %.4f", used_time, used_times_mean);
+        if(print_flag_)
+        {
+            ROS_INFO("Used time: %.4f, Mean time: %.4f", used_time, used_times_mean);
+        }
         rate.sleep(); // 等待直到下一个周期
     }
     std::cout << "FaceDetectThread stopped." << std::endl;
@@ -208,7 +206,6 @@ std::string FaceDetectThread::GetHostName()
 }
 int FaceDetectThread::FlipPrintFlag()
 {
-    std::lock_guard<std::mutex> lock(mutex_);
     print_flag_ = !print_flag_;
     return 0;
 }
