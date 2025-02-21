@@ -236,7 +236,7 @@ target_link_libraries(face_id_app face_id_thread
 #                                 )
 
 
-
+# ---------------for detection test---------------------#
 # add_executable(faceID ${PROJECT_SOURCE_DIR}/src/faceID.cpp)
 # target_link_libraries(faceID  scrfd_cuda
 #                                 jsoncpp
@@ -245,6 +245,8 @@ target_link_libraries(face_id_app face_id_thread
 #                                 ros_adapter
 #                                 simple_yolo_cuda
 #                                 )
+# ---------------for detection test---------------------#
+
 # add_executable(face_feature_test src/face_feature_test.cpp)
 # target_link_libraries(face_feature_test  face_feature
 #                                 glog
