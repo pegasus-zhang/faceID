@@ -13,7 +13,7 @@ int FaceRecognizer::Init(nlohmann::json config)
 {
     config_ = config;
     face_detector_ = ScrfdGpu::IScrfdManager::create();
-    face_detector_->Init("/home/jetson/workspace/faceID_jzb/weights/det_10g.onnx",
+    face_detector_->Init(config["model_parameter"]["face_detector"]["model_path"],
                          false,config["model_parameter"]["face_detector"]["confidence_threshold"]);
     face_feature_ = GeelyRobotVisionGpu::IFaceFeatureManager::create();
     face_feature_->SetBatchSize(5);
