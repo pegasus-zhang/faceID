@@ -100,31 +100,34 @@ void FaceDetectThread::run()
         // {
         //     std::cout << "Face " << i << ": ID = " << face_info.face_ids[i] << ", Score = " << face_info.scores[i] << std::endl;
         // }
-        // // 在图像上绘制人脸边界框并显示人脸 ID 和分数
-        // cv::Mat cpu_img;
-        // gpu_frame.download(cpu_img);
-        // for (size_t i = 0; i < face_infos.boxes.size(); i++)
-        // {
-        //     const auto& box = face_infos.boxes[i];
-        //     cv::rectangle(cpu_img, cv::Point(box.left, box.top), cv::Point(box.right, box.bottom), cv::Scalar(0, 0, 255), 2);
-        //     std::string label = "ID: " + face_infos.face_ids[i] + ", Score: " + std::to_string(face_infos.scores[i]);
-        //     int baseline = 0;
-        //     cv::Size label_size = cv::getTextSize(label, cv::FONT_HERSHEY_SIMPLEX, 0.5, 1, &baseline);
-        //     cv::putText(cpu_img, label, cv::Point(box.left, box.top - label_size.height - 5), cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(0, 255, 0), 2);
-        // }
-        // for (size_t i = 0; i < body_bbox.size(); i++)
-        // {
-        //     const auto& box = body_bbox[i];
-        //     cv::rectangle(cpu_img, cv::Point(box.left, box.top), cv::Point(box.right, box.bottom), cv::Scalar(0, 0, 255), 2);
-        // }
-        // for(size_t i = 0; i < foot_point_pixel.size(); i++)
-        // {
-        //     cv::circle(cpu_img, cv::Point((int)foot_point_pixel[i].x, (int)foot_point_pixel[i].y), 5, cv::Scalar(0, 255, 0), -1);
-        // }
-        // // 显示图像
-        // cv::imshow("Detected Faces", cpu_img);
-        // cv::waitKey(40);
-        // // cv::imwrite("/home/jetson/workspace/faceID_jzb/data/backup/frame_1733835120220579455_result.png", cpu_img);
+        if(config_["debug_parameters"]["show_flag"])
+        {
+            // 在图像上绘制人脸边界框并显示人脸 ID 和分数
+            cv::Mat cpu_img;
+            gpu_frame.download(cpu_img);
+            for (size_t i = 0; i < face_infos.boxes.size(); i++)
+            {
+                const auto& box = face_infos.boxes[i];
+                cv::rectangle(cpu_img, cv::Point(box.left, box.top), cv::Point(box.right, box.bottom), cv::Scalar(0, 0, 255), 2);
+                std::string label = "ID: " + face_infos.face_ids[i] + ", Score: " + std::to_string(face_infos.scores[i]);
+                int baseline = 0;
+                cv::Size label_size = cv::getTextSize(label, cv::FONT_HERSHEY_SIMPLEX, 0.5, 1, &baseline);
+                cv::putText(cpu_img, label, cv::Point(box.left, box.top - label_size.height - 5), cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(0, 255, 0), 2);
+            }
+            for (size_t i = 0; i < body_bbox.size(); i++)
+            {
+                const auto& box = body_bbox[i];
+                cv::rectangle(cpu_img, cv::Point(box.left, box.top), cv::Point(box.right, box.bottom), cv::Scalar(0, 0, 255), 2);
+            }
+            for(size_t i = 0; i < foot_point_pixel.size(); i++)
+            {
+                cv::circle(cpu_img, cv::Point((int)foot_point_pixel[i].x, (int)foot_point_pixel[i].y), 5, cv::Scalar(0, 255, 0), -1);
+            }
+            // 显示图像
+            cv::imshow("Detected Faces", cpu_img);
+            cv::waitKey(40);
+            // cv::imwrite("/home/jetson/workspace/faceID_jzb/data/backup/frame_1733835120220579455_result.png", cpu_img);
+        }
         pub_.publish(face_lists);
         
         auto time_end = std::chrono::high_resolution_clock::now();

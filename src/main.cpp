@@ -33,6 +33,7 @@ int main(int argc, char** argv) {
 	bool suspend_flag = cmd_parser.exist("suspend");
     config["debug_parameters"]["suspend"] = suspend_flag;
 	config["debug_parameters"]["host_name"] = host_name;
+    config["debug_parameters"]["show_flag"] = show_flag;
     ros::NodeHandle nh;
     CmdListener cmd_listener;
     cmd_listener.Init(nh, config);

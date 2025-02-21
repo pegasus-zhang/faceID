@@ -134,7 +134,6 @@ cuda_add_library(scrfd SHARED ${PROJECT_SOURCE_DIR}/src/scrfd.cu)
 target_link_libraries(scrfd ${TRT_LIBS} ${OpenCV_LIBS} )
 SET_TARGET_PROPERTIES (scrfd PROPERTIES VERSION "${_app_version_}")
 
-
 cuda_add_library(scrfd_cuda SHARED ${PROJECT_SOURCE_DIR}/src/scrfd_cuda.cu)
 target_link_libraries(scrfd_cuda ${TRT_LIBS} ${OpenCV_LIBS})
 SET_TARGET_PROPERTIES (scrfd_cuda PROPERTIES VERSION "${_app_version_}")
@@ -143,28 +142,36 @@ cuda_add_library(face_feature SHARED ${PROJECT_SOURCE_DIR}/src/face_feature.cu)
 target_link_libraries(face_feature ${TRT_LIBS} ${OpenCV_LIBS} )
 SET_TARGET_PROPERTIES (face_feature PROPERTIES VERSION "${_app_version_}")
 
-add_library(face_alignment SHARED ${PROJECT_SOURCE_DIR}/src/face_alignment.cpp)
-target_link_libraries(face_alignment ${OpenCV_LIBS} )
-SET_TARGET_PROPERTIES (face_alignment PROPERTIES VERSION "${_app_version_}")
-
 cuda_add_library(cuda_utils SHARED ${PROJECT_SOURCE_DIR}/src/cuda_utils.cu)
 target_link_libraries(cuda_utils ${TRT_LIBS} ${OpenCV_LIBS} glog)
 SET_TARGET_PROPERTIES (cuda_utils PROPERTIES VERSION "${_app_version_}")
 
-add_library(face_matcher SHARED ${PROJECT_SOURCE_DIR}/src/face_matcher.cpp)
-target_link_libraries(face_matcher ${OpenCV_LIBS} cuda_utils)
-SET_TARGET_PROPERTIES (face_matcher PROPERTIES VERSION "${_app_version_}")
+cuda_add_library(simple_yolo_cuda SHARED ${PROJECT_SOURCE_DIR}/src/simple_yolo_cuda.cu)
+target_link_libraries(simple_yolo_cuda ${TRT_LIBS} ${OpenCV_LIBS} ${catkin_LIBRARIES})
+SET_TARGET_PROPERTIES (simple_yolo_cuda PROPERTIES VERSION "${_app_version_}")
 
-add_library(face_register SHARED ${PROJECT_SOURCE_DIR}/src/face_register.cpp)
-target_link_libraries(face_register ${OpenCV_LIBS} face_matcher)
-SET_TARGET_PROPERTIES (face_register PROPERTIES VERSION "${_app_version_}")
+# add_library(face_alignment SHARED ${PROJECT_SOURCE_DIR}/src/face_alignment.cpp)
+# target_link_libraries(face_alignment ${OpenCV_LIBS} )
+# SET_TARGET_PROPERTIES (face_alignment PROPERTIES VERSION "${_app_version_}")
 
-add_library(face_recognizer SHARED ${PROJECT_SOURCE_DIR}/src/face_recognizer.cpp)
-target_link_libraries(face_recognizer ${OpenCV_LIBS} face_register
-                                                    face_matcher
+# add_library(face_matcher SHARED ${PROJECT_SOURCE_DIR}/src/face_matcher.cpp)
+# target_link_libraries(face_matcher ${OpenCV_LIBS} cuda_utils)
+# SET_TARGET_PROPERTIES (face_matcher PROPERTIES VERSION "${_app_version_}")
+
+# add_library(face_register SHARED ${PROJECT_SOURCE_DIR}/src/face_register.cpp)
+# target_link_libraries(face_register ${OpenCV_LIBS} face_matcher)
+# SET_TARGET_PROPERTIES (face_register PROPERTIES VERSION "${_app_version_}")
+
+add_library(face_recognizer SHARED ${PROJECT_SOURCE_DIR}/src/face_recognizer.cpp
+                                    ${PROJECT_SOURCE_DIR}/src/face_alignment.cpp
+                                    ${PROJECT_SOURCE_DIR}/src/face_matcher.cpp
+                                    ${PROJECT_SOURCE_DIR}/src/face_register.cpp
+)
+target_link_libraries(face_recognizer               cuda_utils
+                                                    scrfd_cuda
                                                     face_feature
-                                                    face_alignment
-                                                    scrfd_cuda)
+                                                    ${OpenCV_LIBS}
+                                                    )
 SET_TARGET_PROPERTIES (face_recognizer PROPERTIES VERSION "${_app_version_}")
 
 add_library(mythread SHARED ${PROJECT_SOURCE_DIR}/src/my_thread.cpp)
@@ -175,13 +182,13 @@ add_library(ros_adapter SHARED ${PROJECT_SOURCE_DIR}/src/ros_adapter.cpp)
 target_link_libraries(ros_adapter pthread ${OpenCV_LIBS} ${catkin_LIBRARIES})
 SET_TARGET_PROPERTIES (ros_adapter PROPERTIES VERSION "${_app_version_}")
 
-add_library(ipm SHARED src/ipm.cpp)
+add_library(ipm SHARED ${PROJECT_SOURCE_DIR}/src/ipm.cpp)
 target_link_libraries(ipm   ${OpenCV_LIBS}           
-                                )  
-                                
-SET_TARGET_PROPERTIES (ros_adapter PROPERTIES VERSION "${_app_version_}")
+                                )                      
+SET_TARGET_PROPERTIES (ipm PROPERTIES VERSION "${_app_version_}")
 
-add_library(face_id_thread SHARED src/face_id_thread.cpp)
+add_library(face_id_thread SHARED ${PROJECT_SOURCE_DIR}/src/face_id_thread.cpp
+                                    )
 target_link_libraries(face_id_thread   face_recognizer
                                             simple_yolo_cuda
                                             ipm
@@ -194,6 +201,23 @@ target_link_libraries(face_id_thread   face_recognizer
                                 ) 
 SET_TARGET_PROPERTIES (face_id_thread PROPERTIES VERSION "${_app_version_}")
 
+# add_library(cmd_listener SHARED ${PROJECT_SOURCE_DIR}/src/cmd_listener.cpp 
+#                                 ${PROJECT_SOURCE_DIR}/src/myPinyin.cpp)
+# target_link_libraries(cmd_listener  face_id_thread
+#                                     glog
+#                                     ${catkin_LIBRARIES}                                        
+#                                 )                                 
+# SET_TARGET_PROPERTIES (cmd_listener PROPERTIES VERSION "${_app_version_}")
+
+add_executable(face_id_app ${PROJECT_SOURCE_DIR}/src/main.cpp
+                            ${PROJECT_SOURCE_DIR}/src/cmd_listener.cpp
+                            ${PROJECT_SOURCE_DIR}/src/myPinyin.cpp)
+target_link_libraries(face_id_app face_id_thread
+                                    glog  
+                                    ${catkin_LIBRARIES}   
+)
+
+
 # add_executable(face_id_thread_test src/face_id_thread.cpp)
 # target_link_libraries(face_id_thread_test   face_id_thread      
 #                                 )                                 
@@ -204,9 +228,6 @@ SET_TARGET_PROPERTIES (face_id_thread PROPERTIES VERSION "${_app_version_}")
 #                                 glog
 #                                 ) 
 
-cuda_add_library(simple_yolo_cuda SHARED ${PROJECT_SOURCE_DIR}/src/simple_yolo_cuda.cu)
-target_link_libraries(simple_yolo_cuda ${TRT_LIBS} ${OpenCV_LIBS} ${catkin_LIBRARIES})
-SET_TARGET_PROPERTIES (simple_yolo_cuda PROPERTIES VERSION "${_app_version_}")
 # add_executable(yolo_test src/yolo_test.cpp)
 # target_link_libraries(yolo_test  scrfd
 #                                 ${OpenCV_LIBS}
@@ -214,22 +235,16 @@ SET_TARGET_PROPERTIES (simple_yolo_cuda PROPERTIES VERSION "${_app_version_}")
 #                                 glog 
 #                                 )
 
-add_library(cmd_listener SHARED src/cmd_listener.cpp src/myPinyin.cpp)
-target_link_libraries(cmd_listener  face_id_thread
-                                    glog
-                                    ${catkin_LIBRARIES}                                        
-                                )                                 
-SET_TARGET_PROPERTIES (cmd_listener PROPERTIES VERSION "${_app_version_}")
 
 
-add_executable(faceID src/faceID.cpp)
-target_link_libraries(faceID  scrfd_cuda
-                                jsoncpp
-                                glog
-                                pthread
-                                ros_adapter
-                                simple_yolo_cuda
-                                )
+# add_executable(faceID ${PROJECT_SOURCE_DIR}/src/faceID.cpp)
+# target_link_libraries(faceID  scrfd_cuda
+#                                 jsoncpp
+#                                 glog
+#                                 pthread
+#                                 ros_adapter
+#                                 simple_yolo_cuda
+#                                 )
 # add_executable(face_feature_test src/face_feature_test.cpp)
 # target_link_libraries(face_feature_test  face_feature
 #                                 glog
@@ -244,8 +259,6 @@ target_link_libraries(faceID  scrfd_cuda
 # add_executable(ipm_test src/ipm.cpp)
 # target_link_libraries(ipm_test   ${OpenCV_LIBS}           
 #                                 )                                 
-add_executable(face_id_app src/main.cpp )
-target_link_libraries(face_id_app cmd_listener)
                                                                 
 # # ROS-Specific Targets [ADDED]  
 # if(DEFINED ENV{ROS_VERSION})  
