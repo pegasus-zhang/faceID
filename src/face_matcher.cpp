@@ -80,10 +80,14 @@ int FaceMatcher::Matching(const cv::cuda::GpuMat& d_face_emb, float score_thresh
             id = maxLoc.x;
             label = face_name_list_[id];
 
-            if (maxScore < score_threshold || maxScore == 0) {
+            if (maxScore < score_threshold || maxScore < 1e-6) {
                 id = -1;
                 break;
             }
+        }
+
+        if (maxScore < score_threshold || maxScore < 1e-6) {
+            id = -1;
         }
 
         record_label.push_back(id);

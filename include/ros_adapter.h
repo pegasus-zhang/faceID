@@ -19,7 +19,7 @@ public:
     // 使用=default关键字表示该析构函数由编译器自动生成
     virtual ~RosAdapter() = default;
     virtual int Init(std::string node_name,std::string topic_name,int queue_size) = 0;
-    virtual int GetImage(cv::cuda::GpuMat& image)=0;
+    virtual int GetImage(cv::cuda::GpuMat& image,ros::Time& timestamp)=0;
     virtual void spin() = 0;
 };
 
@@ -46,7 +46,7 @@ public:
     void spin() override;
     boost::shared_ptr<void> popMessage();
     int Init(std::string node_name, std::string topic_name,int queue_size) override;
-    int GetImage(cv::cuda::GpuMat& image) override;
+    int GetImage(cv::cuda::GpuMat& image,ros::Time& timestamp) override;
 
 private:
     boost::shared_ptr<ros::NodeHandle> nh_;
@@ -64,7 +64,7 @@ public:
     void spin() override;
     std::shared_ptr<void> popMessage();
     int Init(std::string node_name,std::string topic_name,int queue_size) override;
-    int GetImage(cv::cuda::GpuMat& image) override;
+    int GetImage(cv::cuda::GpuMat& image,ros::Time& timestamp) override;
 
 private:
     std::shared_ptr<rclcpp::Node> node_;

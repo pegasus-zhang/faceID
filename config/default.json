@@ -67,7 +67,7 @@
     "name2id_path":"../data/known_people/name2id.json",
     "camera_parameter":
     {
-        "fisheye_rostopic":"/cam_front/csi_cam/image_raw/compressed", 
+        "fisheye_rostopic":"/cam_front_fish/csi_cam/image_raw/compressed", 
         "camera_intrinsics":[[511.3623953605, 0.0, 945.0244978431],[0, 511.4026186026, 775.5020771799],[0, 0, 1]],
         "camera_distortion":[0.1347717201, -0.0338054641, -0.0023963342, 0.0011715332], 
         "camera2robot_extrinsic": [
@@ -116,7 +116,7 @@
         "face_feature":
         {
             "model_path": "../weights/resnet50.onnx",
-            "confidence_threshold": 0.5,
+            "confidence_threshold": 0.7,
             "build_engine":false
         }
         

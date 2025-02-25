@@ -36,7 +36,8 @@ void FaceDetectThread::run()
 
         // std::cout << "Thread is running custom logic." << std::endl;
         cv::cuda::GpuMat gpu_frame;
-        ros_adapter_->GetImage(gpu_frame);
+        ros::Time timestamp;
+        ros_adapter_->GetImage(gpu_frame,timestamp);
         // 检测人脸并提取特征
         FaceInfo face_infos;
         face_recognizer_->DetectFace(gpu_frame, face_infos);
@@ -44,7 +45,7 @@ void FaceDetectThread::run()
         int width = config_["camera_parameter"]["image_size"][0];   // 获取宽度
         int height = config_["camera_parameter"]["image_size"][1];  // 获取高度
         ros_interface::FaceList face_lists;
-        face_lists.header.stamp = ros::Time::now();
+        face_lists.header.stamp = timestamp;
         std::vector<cv::Point2f> foot_point_pixel;
         for (size_t i = 0; i < face_infos.face_ids.size(); ++i) 
         {
@@ -104,7 +105,7 @@ void FaceDetectThread::run()
             {
                 const auto& box = face_infos.boxes[i];
                 cv::rectangle(cpu_img, cv::Point(box.left, box.top), cv::Point(box.right, box.bottom), cv::Scalar(0, 0, 255), 2);
-                std::string label = "ID: " + face_infos.face_ids[i] + ", Score: " + std::to_string(face_infos.scores[i]);
+                std::string label = "ID: " + face_infos.face_ids[i] + ", Score: " + std::to_string(face_infos.scores[i])+ ", BoxConf: " + std::to_string(face_infos.boxes[i].confidence);
                 int baseline = 0;
                 cv::Size label_size = cv::getTextSize(label, cv::FONT_HERSHEY_SIMPLEX, 0.5, 1, &baseline);
                 cv::putText(cpu_img, label, cv::Point(box.left, box.top - label_size.height - 5), cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(0, 255, 0), 2);
@@ -188,10 +189,10 @@ void FaceDetectThread::Spin()
     ros_adapter_->spin();
 }
 
-void FaceDetectThread::GetImageTask(cv::cuda::GpuMat& gpu_frame)
-{
-    ros_adapter_->GetImage(gpu_frame);
-}
+// void FaceDetectThread::GetImageTask(cv::cuda::GpuMat& gpu_frame)
+// {
+//     ros_adapter_->GetImage(gpu_frame);
+// }
 
 int FaceDetectThread::SetHostName(std::string host_name)
 {

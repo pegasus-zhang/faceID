@@ -30,7 +30,7 @@ public:
     void run() override;
     int Init(nlohmann::json config);
     void Spin();
-    void GetImageTask(cv::cuda::GpuMat& gpu_frame);
+    // void GetImageTask(cv::cuda::GpuMat& gpu_frame);
     int SetHostName(std::string host_name);
     std::string GetHostName();
     int FlipPrintFlag();

@@ -50,13 +50,14 @@ int Ros1Adapter::Init(std::string node_name, std::string topic_name,int queue_si
     subscribe(topic_name,queue_size);
     return 0;
 }
-int Ros1Adapter::GetImage(cv::cuda::GpuMat& img)
+int Ros1Adapter::GetImage(cv::cuda::GpuMat& img,ros::Time& timestamp)
 {
     auto msg = popMessage(); // pop the message from the queue
     auto image_msg = boost::static_pointer_cast<Ros1Adapter::CompressedImage>(msg);  
     // ROS_INFO("Processing image from queue...");  
     // std::cout << "Image size: " << image_msg->data.size() << " bytes" << std::endl;  
     cv::Mat image = cv::imdecode(cv::Mat(image_msg->data), cv::IMREAD_COLOR); // 解码为 BGR 图像 
+    timestamp = image_msg->header.stamp;
     img.upload(image);
     return 0;
 }
@@ -90,13 +91,14 @@ int Ros2Adapter::Init(std::string node_name, std::string topic_name,int queue_si
     subscribe(topic_name,queue_size);
     return 0;
 }
-int Ros2Adapter::GetImage(cv::cuda::GpuMat& img)
+int Ros2Adapter::GetImage(cv::cuda::GpuMat& img,ros::Time& timestamp)
 {
     auto msg = popMessage(); // pop the message from the queue
     auto image_msg = boost::static_pointer_cast<Ros2Adapter::CompressedImage>(msg);  
     // RCLCPP_INFO(rclcpp::get_logger("fifo_queue_example"), "Processing image from queue...");  
     // std::cout << "Image size: " << image_msg->data.size() << " bytes" << std::endl; 
     cv::Mat image = cv::imdecode(cv::Mat(image_msg->data), cv::IMREAD_COLOR); // 解码为 BGR 图像 
+    timestamp = image_msg->header.stamp;
     img.upload(image); 
     return 0;
 }

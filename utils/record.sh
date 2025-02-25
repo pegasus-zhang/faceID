@@ -1,1 +1,1 @@
-rosbag record /cam_front_fish/csi_cam/image_raw/compressed /perception/result/FaceList /perception/result/BodyList /perception/fusion/motion_manager/MMBodyList /odom
+rosbag record /cam_front_fish/csi_cam/image_raw/compressed /perception/result/FaceList /perception/result/BodyList /perception/fusion/motion_manager/MMBodyList /map/global_odom
