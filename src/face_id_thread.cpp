@@ -54,6 +54,7 @@ void FaceDetectThread::run()
             if (host_name == face_infos.face_ids[i]&& face_infos.scores[i] > max_confidence) { // 置信度阈值
                 ros_interface::Face face;
                 face.name = face_infos.face_ids[i];
+                face.id = name2id_dict[face.name];
                 face.confidence = face_infos.scores[i];
                 max_confidence = face_infos.scores[i];
                 face.face_box.xmin = std::max(0, (int)face_infos.boxes[i].left);
@@ -84,8 +85,11 @@ void FaceDetectThread::run()
                     face.center_point_abs.y = foot_point_robot[0].y;
                     face.center_point_abs.z = foot_point_robot[0].z;
                     face_lists.face.push_back(face);
-                    ROS_INFO("Detected face: %s, Confidence: %.2f, 3d pos(camera): (%f, %f, %f)", face.name.c_str(), face.confidence, foot_point_camera[0].x, foot_point_camera[0].y, foot_point_camera[0].z);
-                    ROS_INFO("Detected face: %s, Confidence: %.2f, 3d pos(robot): (%f, %f, %f)", face.name.c_str(), face.confidence, face.center_point_abs.x, face.center_point_abs.y, face.center_point_abs.z);
+                    if(print_flag_)
+                    {
+                        ROS_INFO("Detected face: %s, Confidence: %.2f, 3d pos(camera): (%f, %f, %f)", face.name.c_str(), face.confidence, foot_point_camera[0].x, foot_point_camera[0].y, foot_point_camera[0].z);
+                        ROS_INFO("Detected face: %s, Confidence: %.2f, 3d pos(robot): (%f, %f, %f)", face.name.c_str(), face.confidence, face.center_point_abs.x, face.center_point_abs.y, face.center_point_abs.z);
+                    }
                 }
                 
             }
