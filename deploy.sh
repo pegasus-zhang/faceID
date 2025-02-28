@@ -28,7 +28,7 @@ done
 if [ "$FIRST_RUN" == "true" ]; then
     echo "首次更新，执行初始化操作..."
     mkdir -p faceID_deploy 
-    cp -r config weights workspace lib ros1_interface faceID_deploy/
+    cp -r config weights workspace lib ros1_interface faceID_deploy/ run.sh run_test.sh
     mkdir -p faceID_deploy/data
     cp -r data/known_people faceID_deploy/data/
     rsync -avz --progress faceID_deploy/* $USER@$IP:/home/$USER/02_projects/faceID/

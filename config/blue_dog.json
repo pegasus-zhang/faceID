@@ -8,8 +8,8 @@
         [ 4.15712789e-05, -1.32348016e-03,  1.00000000e+00]],
         "TARGET_SIZE":[1200,796]
     },
-    "database_path": "../data/known_people/database-resnet50.json",
-    "name2id_path":"../data/known_people/name2id.json",
+    "database_path": "data/known_people/database-resnet50.json",
+    "name2id_path":"data/known_people/name2id.json",
     "camera_parameter":
     {
         "fisheye_rostopic":"/cam_front/csi_cam/image_raw/compressed",
@@ -25,20 +25,20 @@
     {
         "face_detector":
         {
-            "model_path": "../weights/det_10g.onnx",
+            "model_path": "weights/det_10g.onnx",
             "confidence_threshold": 0.6,
             "build_engine":false
         },
         "body_detector":
         {
-            "model_path": "../weights/yolov11m-pose.onnx",
+            "model_path": "weights/yolov11m-pose.onnx",
             "confidence_threshold": 0.6,
             "nms_threshold":0.5,
             "build_engine":false
         },
         "face_feature":
         {
-            "model_path": "../weights/resnet50.onnx",
+            "model_path": "weights/resnet50.onnx",
             "confidence_threshold": 0.5,
             "build_engine":false
         }
