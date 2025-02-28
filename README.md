@@ -10,12 +10,18 @@
 Orin NX, 森云鱼眼相机
 
 ## 更新日志
+* [2025.02.08]  添加face id 识别python代码，模型以及环境。
 * [2025.02.28] 添加face id 识别C++代码，模型以及环境。
 
 ## 运行方法 
 * 编译主程序  
-```bash ./build.sh```
-* 编译ros接口  
-```cd ros1_interface && catkin_make```
+    ```
+    bash ./build.sh
+    ```
+* 编译ros接口,并启用  
+    ```
+    cd ros1_interface && catkin_make
+    source ros1_interface/devel/setup.bash
+    ```
 * 运行程序  
 ``` ./run.sh```
