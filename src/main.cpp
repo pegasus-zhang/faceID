@@ -11,7 +11,7 @@ int main(int argc, char** argv) {
     FLAGS_colorlogtostderr=true;
     google::InitGoogleLogging(argv[0]);
     cmdline::parser cmd_parser;
-    cmd_parser.add<std::string>("config_path",'c',"config path",false,"../config/default.json");
+    cmd_parser.add<std::string>("config_path",'c',"config path",false,"config/default.json");
     cmd_parser.add("show",'\0',"show result flag");
     cmd_parser.add("suspend",'\0',"suspend thread flag");
     cmd_parser.add<std::string>("host_name",'\0',"host name",false,"Zhangzhaokang");
