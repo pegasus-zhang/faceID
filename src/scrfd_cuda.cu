@@ -2054,8 +2054,8 @@ __global__ void decode_and_map_all_layers(
     // 获取当前 anchor 的置信度  
     float score = scores[idx];  
     if (score < score_threshold) return;  
-    printf("score = %.2f, \n",  
-        score); 
+    // printf("score = %.2f, \n",  
+    //     score); 
 
     // 解码检测框  
     float dx = bboxes[idx * 4 + 0];  
@@ -2066,8 +2066,8 @@ __global__ void decode_and_map_all_layers(
     float anchor_x = anchors[idx * 2 + 0];  
     float anchor_y = anchors[idx * 2 + 1];  
 
-    printf("Thread %d: dx=%.2f, dy=%.2f, dw=%.2f, dh=%.2f, anchor_x=%.2f, anchor_y=%.2f\n",  
-        idx, dx, dy, dw, dh, anchor_x, anchor_y); 
+    // printf("Thread %d: dx=%.2f, dy=%.2f, dw=%.2f, dh=%.2f, anchor_x=%.2f, anchor_y=%.2f\n",  
+    //     idx, dx, dy, dw, dh, anchor_x, anchor_y); 
 
     float x1 = anchor_x - dx * stride;  
     float y1 = anchor_y - dy * stride;  
@@ -2080,8 +2080,8 @@ __global__ void decode_and_map_all_layers(
     float x2_img = x2 * d2i[0] + y2 * d2i[1] + d2i[2];  
     float y2_img = x2 * d2i[3] + y2 * d2i[4] + d2i[5];  
 
-    printf("Thread %d: x1_img=%.2f, y1_img=%.2f, x2_img=%.2f, y2_img=%.2f\n",  
-        idx, x1_img, y1_img, x2_img, y2_img); 
+    // printf("Thread %d: x1_img=%.2f, y1_img=%.2f, x2_img=%.2f, y2_img=%.2f\n",  
+    //     idx, x1_img, y1_img, x2_img, y2_img); 
 
     // 保存检测框  
     int box_idx = atomicAdd(valid_count, 1);  
@@ -2370,47 +2370,8 @@ class ScrfdTRTInferImpl : public Infer, public ThreadSafedAsyncInferImpl{
                     final_boxes.push_back(box);  
                 }
 
-                ///////////////// 后处理 gpu//////////////////////
-                // int count     = min(MAX_IMAGE_BBOX, (int)boxes.size());
                 auto& job     = fetch_jobs[0];
                 job.output = final_boxes;
-                // // 输出结果  
-                // for (const auto& box : boxes) {  
-                //     std::cout << "Score: " << box.confidence << "\n";  
-                //     std::cout << "BBox: [" << box.left << ", " << box.top << ", " << box.right << ", " << box.bottom << "]\n";  
-                //     std::cout << "Keypoints: ";  
-                //     // image_based_boxes.emplace_back(det.bbox[0], det.bbox[1], det.bbox[2], det.bbox[3], det.score, 0);
-                //     for (const auto& kp : box.keypoints) {  
-                //         std::cout << "[" << kp.x << ", " << kp.y << "] ";  
-                //     }  
-                //     std::cout << "\n";  
-                // }  
-            ///////////////////zzk/////////////////////
-
-                // for(int ibatch = 0; ibatch < infer_batch_size; ++ibatch){
-                    
-                //     auto& job                 = fetch_jobs[ibatch];
-                //     float* image_based_output = output->gpu<float>(ibatch);
-                //     float* output_array_ptr   = output_array_device.gpu<float>(ibatch);
-                //     auto affine_matrix        = affin_matrix_device.gpu<float>(ibatch);
-                //     checkCudaRuntime(cudaMemsetAsync(output_array_ptr, 0, sizeof(int), stream_));
-                //     decode_kernel_invoker(image_based_output, output->size(2), num_classes, confidence_threshold_, nms_threshold_, affine_matrix, output_array_ptr, MAX_IMAGE_BBOX, stream_);
-                // }
-                // output_array_device.to_cpu();
-                // for(int ibatch = 0; ibatch < infer_batch_size; ++ibatch){
-                //     // float* parray = output_array_device.cpu<float>(ibatch);
-                //     int count     = min(MAX_IMAGE_BBOX, detections.size());
-                //     auto& job     = fetch_jobs[ibatch];
-                //     auto& image_based_boxes   = job.output;
-                //     for(int i = 0; i < count; ++i){
-                //         // float* pbox  = parray + 1 + i * NUM_BOX_ELEMENT;
-                //         // int label    = pbox[5];
-                //         // int keepflag = pbox[6];
-                //         // if(keepflag == 1){
-                //         //     image_based_boxes.emplace_back(pbox[0], pbox[1], pbox[2], pbox[3], pbox[4], label);
-                //         // }
-                //         image_based_boxes.emplace_back(det.bbox[0], det.bbox[1], det.bbox[2], det.bbox[3], pbox[4], label);
-                //     }
                 job.pro->set_value(final_boxes);
                 fetch_jobs.clear();
                 cudaMemset(d_valid_count, 0, sizeof(int));  
