@@ -7,7 +7,7 @@
 #include "ros_interface/Face.h"
 #include "ros_interface/FaceList.h"
 #include <cv_bridge/cv_bridge.h>
-
+#include <sys/stat.h>
 typedef nlohmann::json json;
 FaceDetectThread::FaceDetectThread(/* args */)
 {
@@ -24,12 +24,17 @@ void FaceDetectThread::run()
     double all_used_times = 0.0;
     double used_times_mean = 0.0;
     json name2id_dict;
+    bool first_flag = true;
     face_recognizer_->GetName2IDDict(name2id_dict);
     cv::Mat camera2robot_extrinsic = jsonToCvMat(config_["camera_parameter"]["camera2robot_extrinsic"],4,4,2);
     while (!is_stopped() && ros::ok()) {
         // 处理挂起逻辑
         std::unique_lock<std::mutex> lock(cv_mtx_);
-        cv_.wait(lock, [this] { return !is_suspended() || is_stopped(); });
+        if (is_suspended())
+        {
+            first_flag = true;
+        }
+        cv_.wait(lock, [this] {return !is_suspended() || is_stopped(); });
 
         if (is_stopped()) break;
         auto time_start = std::chrono::high_resolution_clock::now();
@@ -91,6 +96,39 @@ void FaceDetectThread::run()
                         ROS_INFO("Detected face: %s, Confidence: %.2f, 3d pos(robot): (%f, %f, %f)", face.name.c_str(), face.confidence, face.center_point_abs.x, face.center_point_abs.y, face.center_point_abs.z);
                     }
                 }
+                //实现启动后ros只发送一次原图
+                if(first_flag)
+                {
+                    first_flag = false;
+                    cv::Mat cpu_img;
+                    gpu_frame.download(cpu_img);
+                    img_bridge.image = cpu_img;
+                    img_bridge.encoding = "bgr8";
+                    sensor_msgs::CompressedImage welcome_image;
+                    img_bridge.toCompressedImageMsg(welcome_image);
+                    pub_img_.publish(welcome_image);
+                    ROS_INFO("Publish welcome image");
+                    for (size_t i = 0; i < face_infos.boxes.size(); i++)
+                    {
+                        const auto& box = face_infos.boxes[i];
+                        cv::rectangle(cpu_img, cv::Point(box.left, box.top), cv::Point(box.right, box.bottom), cv::Scalar(0, 0, 255), 2);
+                        std::string label = "ID: " + face_infos.face_ids[i] + ", Score: " + std::to_string(face_infos.scores[i])+ ", BoxConf: " + std::to_string(face_infos.boxes[i].confidence);
+                        int baseline = 0;
+                        cv::Size label_size = cv::getTextSize(label, cv::FONT_HERSHEY_SIMPLEX, 0.5, 1, &baseline);
+                        cv::putText(cpu_img, label, cv::Point(box.left, box.top - label_size.height - 5), cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(0, 255, 0), 2);
+                    }
+                    //保存图片
+                    std::string image_timestamp = std::to_string(ros::Time::now().toSec());
+                    std::string image_path = "outputs/welcome_image_" + image_timestamp + ".jpg";
+                    std::string folder_path = "outputs";
+                    struct stat info;
+                    if (stat(folder_path.c_str(), &info) != 0) {
+                        // 创建文件夹
+                        mkdir(folder_path.c_str(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
+                    }
+                    cv::imwrite(image_path, cpu_img);
+                }
+
                 
             }
         }
