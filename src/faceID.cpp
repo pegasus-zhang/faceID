@@ -362,7 +362,8 @@ int main(int argc,char* argv[])
         while(running)
         {
             cv::cuda::GpuMat bgr_image;
-            ros_adapter->GetImage(bgr_image);
+            ros::Time timestamp;
+            ros_adapter->GetImage(bgr_image,timestamp);
             std::shared_future<IScrfd::BoxArray> boxes_future;
             auto begin_timer = timestamp_now_float();
             if(cmd_parser.exist("roi"))
@@ -536,35 +537,35 @@ int main(int argc,char* argv[])
                         }  
                     }
 
-                    for(auto& obj : boxes_yolo)
-                    {
-                        uint8_t b, g, r;
-                        std::tie(b, g, r) = random_color(1);
-                        cv::rectangle(show_image, cv::Point(obj.left, obj.top), cv::Point(obj.right, obj.bottom), cv::Scalar(b, g, r), 2);
-                        // Json::Value bbox;
-                        // bbox.append(obj.left);
-                        // bbox.append(obj.top);
-                        // bbox.append(obj.right);
-                        // bbox.append(obj.bottom);
-                        // bbox.append(obj.confidence);
-                        // // bbox.append(obj.class_label);
-                        // bboxes.append(bbox);
-                        // // std::string name    = std::to_string(obj.class_label);
-                        // // auto caption = cv::format("%s %.2f", name.c_str(), obj.confidence);
-                        // auto caption = cv::format("%.2f", obj.confidence);
-                        // int width    = cv::getTextSize(caption, 0, 1, 2, nullptr).width + 10;
-                        // cv::rectangle(show_image, cv::Point(obj.left-3, obj.top-33), cv::Point(obj.left + width, obj.top), cv::Scalar(b, g, r), -1);
-                        // cv::putText(show_image, caption, cv::Point(obj.left, obj.top-5), 0, 1, cv::Scalar::all(0), 2, 16);
+                    // for(auto& obj : boxes_yolo)
+                    // {
+                    //     uint8_t b, g, r;
+                    //     std::tie(b, g, r) = random_color(1);
+                    //     cv::rectangle(show_image, cv::Point(obj.left, obj.top), cv::Point(obj.right, obj.bottom), cv::Scalar(b, g, r), 2);
+                    //     // Json::Value bbox;
+                    //     // bbox.append(obj.left);
+                    //     // bbox.append(obj.top);
+                    //     // bbox.append(obj.right);
+                    //     // bbox.append(obj.bottom);
+                    //     // bbox.append(obj.confidence);
+                    //     // // bbox.append(obj.class_label);
+                    //     // bboxes.append(bbox);
+                    //     // // std::string name    = std::to_string(obj.class_label);
+                    //     // // auto caption = cv::format("%s %.2f", name.c_str(), obj.confidence);
+                    //     // auto caption = cv::format("%.2f", obj.confidence);
+                    //     // int width    = cv::getTextSize(caption, 0, 1, 2, nullptr).width + 10;
+                    //     // cv::rectangle(show_image, cv::Point(obj.left-3, obj.top-33), cv::Point(obj.left + width, obj.top), cv::Scalar(b, g, r), -1);
+                    //     // cv::putText(show_image, caption, cv::Point(obj.left, obj.top-5), 0, 1, cv::Scalar::all(0), 2, 16);
 
-                        // 绘制关键点  
-                        for (const auto& keypoint : obj.keypoints)  
-                        {  
-                            float x = keypoint.point.x;  
-                            float y = keypoint.point.y;  
-                            // 绘制关键点为小圆点  
-                            cv::circle(show_image, cv::Point(x, y), 3, cv::Scalar(b, g, r), -1); // 半径为3，填充颜色  
-                        }  
-                    }                     
+                    //     // 绘制关键点  
+                    //     for (const auto& keypoint : obj.keypoints)  
+                    //     {  
+                    //         float x = keypoint.point.x;  
+                    //         float y = keypoint.point.y;  
+                    //         // 绘制关键点为小圆点  
+                    //         cv::circle(show_image, cv::Point(x, y), 3, cv::Scalar(b, g, r), -1); // 半径为3，填充颜色  
+                    //     }  
+                    // }                     
                     cv::namedWindow("detection_result",cv::WINDOW_NORMAL);
                     cv::imshow("detection_result",show_image);
                     cv::waitKey(1);

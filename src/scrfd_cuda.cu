@@ -1955,9 +1955,7 @@ std::vector<std::vector<std::vector<float>>> generate_all_anchors(
 IScrfd::BoxArray scrfd_postprocess(  
     const std::vector<float*>& outputs, // 模型输出（CPU 内存）  
     const std::vector<std::vector<std::vector<float>>>& anchors, // 所有特征层的 anchor  
-    const std::vector<int>& strides,               // FPN stride  
-    int input_width, int input_height,             // 模型输入尺寸  
-    int image_width, int image_height,             // 原图尺寸  
+    const std::vector<int>& strides,               // FPN stride   
     float score_threshold, float iou_threshold, float* d2i) {  // 阈值  
     // std::vector<Detection> detections;  
     IScrfd::BoxArray boxes;
@@ -2043,7 +2041,134 @@ IScrfd::BoxArray scrfd_postprocess(
     return final_boxes;  
 }  
 
-    class ScrfdTRTInferImpl : public Infer, public ThreadSafedAsyncInferImpl{
+__global__ void decode_and_map_all_layers(  
+    const float* scores, const float* bboxes, const float* keypoints, int num_anchors, 
+    const float* anchors, int stride, float score_threshold, const float* d2i,  
+    float* output_boxes, float* output_keypoints, int* valid_count) {  
+
+    int idx = blockIdx.x * blockDim.x + threadIdx.x;  
+
+    // 确保线程索引不超过当前层的 anchors 数量  
+    if (idx >= num_anchors) return;  
+
+    // 获取当前 anchor 的置信度  
+    float score = scores[idx];  
+    if (score < score_threshold) return;  
+    printf("score = %.2f, \n",  
+        score); 
+
+    // 解码检测框  
+    float dx = bboxes[idx * 4 + 0];  
+    float dy = bboxes[idx * 4 + 1];  
+    float dw = bboxes[idx * 4 + 2];  
+    float dh = bboxes[idx * 4 + 3];  
+
+    float anchor_x = anchors[idx * 2 + 0];  
+    float anchor_y = anchors[idx * 2 + 1];  
+
+    printf("Thread %d: dx=%.2f, dy=%.2f, dw=%.2f, dh=%.2f, anchor_x=%.2f, anchor_y=%.2f\n",  
+        idx, dx, dy, dw, dh, anchor_x, anchor_y); 
+
+    float x1 = anchor_x - dx * stride;  
+    float y1 = anchor_y - dy * stride;  
+    float x2 = anchor_x + dw * stride;  
+    float y2 = anchor_y + dh * stride;  
+
+    // 映射到原图尺寸  
+    float x1_img = x1 * d2i[0] + y1 * d2i[1] + d2i[2];  
+    float y1_img = x1 * d2i[3] + y1 * d2i[4] + d2i[5];  
+    float x2_img = x2 * d2i[0] + y2 * d2i[1] + d2i[2];  
+    float y2_img = x2 * d2i[3] + y2 * d2i[4] + d2i[5];  
+
+    printf("Thread %d: x1_img=%.2f, y1_img=%.2f, x2_img=%.2f, y2_img=%.2f\n",  
+        idx, x1_img, y1_img, x2_img, y2_img); 
+
+    // 保存检测框  
+    int box_idx = atomicAdd(valid_count, 1);  
+    output_boxes[box_idx * 5 + 0] = x1_img;  
+    output_boxes[box_idx * 5 + 1] = y1_img;  
+    output_boxes[box_idx * 5 + 2] = x2_img;  
+    output_boxes[box_idx * 5 + 3] = y2_img;  
+    output_boxes[box_idx * 5 + 4] = score;  
+
+    // 解码关键点  
+    for (int k = 0; k < 5; ++k) {  
+        float kx = keypoints[idx * 10 + k * 2 + 0];  
+        float ky = keypoints[idx * 10 + k * 2 + 1];  
+        float kp_x = anchor_x + kx * stride;  
+        float kp_y = anchor_y + ky * stride;  
+
+        // 映射关键点到原图尺寸  
+        kp_x = kp_x * d2i[0] + kp_y * d2i[1] + d2i[2];  
+        kp_y = kp_x * d2i[3] + kp_y * d2i[4] + d2i[5];  
+
+        output_keypoints[box_idx * 10 + k * 2 + 0] = kp_x;  
+        output_keypoints[box_idx * 10 + k * 2 + 1] = kp_y;  
+    }  
+}
+
+
+__device__ float calculate_iou(const float* box1, const float* box2) {  
+    // 获取两个框的坐标  
+    float x1 = max(box1[0], box2[0]); // 左上角 x 坐标的最大值  
+    float y1 = max(box1[1], box2[1]); // 左上角 y 坐标的最大值  
+    float x2 = min(box1[2], box2[2]); // 右下角 x 坐标的最小值  
+    float y2 = min(box1[3], box2[3]); // 右下角 y 坐标的最小值  
+
+    // 计算交集面积  
+    float intersection = max(0.0f, x2 - x1) * max(0.0f, y2 - y1);  
+
+    // 计算两个框的面积  
+    float area1 = (box1[2] - box1[0]) * (box1[3] - box1[1]);  
+    float area2 = (box2[2] - box2[0]) * (box2[3] - box2[1]);  
+
+    // 计算并集面积  
+    float union_area = area1 + area2 - intersection;  
+
+    // 返回 IOU  
+    return intersection / union_area;  
+}
+
+__global__ void nms_kernel(  
+    const float* boxes,          // 输入的检测框数组，每个框包含 [x1, y1, x2, y2, score]  
+    const int valid_count,      // 有效检测框的数量  
+    float iou_threshold,         // IOU 阈值  
+    int* keep,                   // 输出的保留框索引数组  
+    int* keep_count              // 保留框的数量  
+) {  
+    // 获取线程索引  
+    int idx = blockIdx.x * blockDim.x + threadIdx.x;  
+
+    // 确保线程索引不超过有效检测框数量  
+    if (idx >= valid_count) return;  
+
+    // 当前线程处理的检测框  
+    const float* current_box = &boxes[idx * 5]; // 每个框包含 [x1, y1, x2, y2, score]  
+
+    // 遍历所有检测框，计算 IOU  
+    for (int i = 0; i < valid_count; ++i) {  
+        if (i == idx) continue; // 跳过自己  
+
+        const float* other_box = &boxes[i * 5];  
+
+        // 计算 IOU  
+        float iou = calculate_iou(current_box, other_box);  
+
+        // 如果 IOU 超过阈值且当前框的分数较低，则标记为不保留  
+        if (iou > iou_threshold && current_box[4] < other_box[4]) {  
+            return; // 当前框被抑制，直接退出  
+        }  
+    }  
+
+    // 如果当前框未被抑制，则将其索引添加到保留列表  
+    int keep_idx = atomicAdd(keep_count, 1); // 使用原子操作更新保留计数  
+    keep[keep_idx] = idx;                   // 保存当前框的索引  
+}
+
+
+
+
+class ScrfdTRTInferImpl : public Infer, public ThreadSafedAsyncInferImpl{
     public:
 
         /** 要求在TRTInferImpl里面执行stop，而不是在基类执行stop **/
@@ -2083,6 +2208,26 @@ IScrfd::BoxArray scrfd_postprocess(
             Tensor output_array_device;
             int max_batch_size = engine->get_max_batch_size();
             auto input         = engine->tensor("input.1");
+            float* d_d2i;
+            int valid_count, keep_count;
+            float* d_output_boxes, *d_output_keypoints;  
+            int* d_valid_count, *d_keep, *d_keep_count, *d_strides;
+            // FPN 的 stride  
+            std::vector<int> strides = {8, 16, 32};  
+            cudaMemcpy(d_strides, strides.data(), strides.size() * sizeof(int), cudaMemcpyHostToDevice);  
+            // 生成 anchors 并分配到 GPU  
+            std::vector<float*> d_anchors(strides.size());  // 存储每层 anchors 的 GPU 地址 
+            cudaMalloc(&d_d2i, 6 * sizeof(float));
+            cudaMalloc(&d_valid_count, sizeof(int));  
+            cudaMalloc(&d_keep, 1024 * sizeof(int));  // 假设最大检测框数量  
+            cudaMalloc(&d_keep_count, sizeof(int));  
+            cudaMalloc(&d_strides, strides.size() * sizeof(int)); 
+            cudaMemset(d_valid_count, 0, sizeof(int));  
+            cudaMemset(d_keep_count, 0, sizeof(int)); 
+            
+            cudaMalloc(&d_output_boxes, 5 * sizeof(float) * 1024);  // 假设最大检测框数量  
+            cudaMalloc(&d_output_keypoints, 10 * sizeof(float) * 1024);  // 假设最大关键点数量     
+
             // auto output        = engine->tensor("448");
             // int num_classes    = output->size(1) - 4;
 
@@ -2103,6 +2248,30 @@ IScrfd::BoxArray scrfd_postprocess(
             output_array_device.resize(max_batch_size, 1 + MAX_IMAGE_BBOX * NUM_BOX_ELEMENT).to_gpu();
 
             vector<Job> fetch_jobs;
+
+
+
+            // 生成 anchor  
+            auto anchors = generate_all_anchors(input_width_, input_height_, strides);  
+           
+            for (size_t layer = 0; layer < strides.size(); ++layer) {  
+                const auto& anchor = anchors[layer];  
+                int num_anchors = anchor.size();  
+                // 展平二维的 anchor 数据为一维数组  
+                std::vector<float> flattened_anchors;  
+                flattened_anchors.reserve(num_anchors * 2); // 每个 anchor 有两个 float 值  
+                for (const auto& a : anchor) {  
+                    flattened_anchors.push_back(a[0]); // x 坐标  
+                    flattened_anchors.push_back(a[1]); // y 坐标  
+                }  
+
+                // 分配 GPU 内存并拷贝数据  
+                cudaMalloc(&(d_anchors[layer]), num_anchors * 2 * sizeof(float));  
+                cudaMemcpy(d_anchors[layer], flattened_anchors.data(), num_anchors * 2 * sizeof(float), cudaMemcpyHostToDevice);  
+            }
+
+     
+
             while(get_jobs_and_wait(fetch_jobs, max_batch_size)){
                 
                 int infer_batch_size = fetch_jobs.size();
@@ -2116,43 +2285,95 @@ IScrfd::BoxArray scrfd_postprocess(
                     job.mono_tensor->release();
                 }
                 engine->forward(false);
-               std::vector<float*> cpu_outputs; 
-                for(int i = 0; i < 9; i++) {
-                    cpu_outputs.emplace_back(static_cast<float*>(engine->output(i)->to_cpu(true).get_data()->cpu()));                  
-                }
-                // output->save_to_file("output.out");
-                // output_array_device.to_gpu(false);
-
-            ///////////////////zzk/////////////////////
-                // // 模型输入尺寸  
-                // int input_width = 640;  
-                // int input_height = 640;  
-
-                // // 原图尺寸  
-                // // int image_width = 1280;  
-                // // int image_height = 720;  
-
-                // int image_width = 1280;  
-                // int image_height = 720;  
-
-                // FPN 的 stride  
-                std::vector<int> strides = {8, 16, 32};  
-
-                // 生成 anchor  
-                auto anchors = generate_all_anchors(input_width_, input_height_, strides);  
+            //    std::vector<float*> cpu_outputs; 
+            //     for(int i = 0; i < 9; i++) {
+            //         cpu_outputs.emplace_back(static_cast<float*>(engine->output(i)->to_cpu(true).get_data()->cpu()));                  
+            //     }
 
                 // 后处理参数  
                 float score_threshold = 0.5;  
                 float iou_threshold = 0.3;  
 
-                // 后处理  
-                IScrfd::BoxArray boxes = scrfd_postprocess(  
-                    cpu_outputs, anchors, strides, input_width_, input_height_, image_width_, image_height_, score_threshold, iou_threshold, fetch_jobs[0].additional.d2i);  
+                // // // 后处理 cpu
+                // IScrfd::BoxArray boxes = scrfd_postprocess(  
+                //     cpu_outputs, anchors, strides, score_threshold, iou_threshold, fetch_jobs[0].additional.d2i);  
 
                 
-                int count     = min(MAX_IMAGE_BBOX, (int)boxes.size());
+                ///////////////// 后处理 gpu//////////////////////
+
+                // 调用解码核函数 
+                cudaMemcpy(d_d2i, fetch_jobs[0].additional.d2i, 6 * sizeof(float), cudaMemcpyHostToDevice);   
+                int threads_per_block = 512;
+
+                for (size_t layer = 0; layer < strides.size(); ++layer) {  
+                    float* scores = static_cast<float*>(engine->output(layer * 3 + 0)->gpu());  
+                    float* bboxes = static_cast<float*>(engine->output(layer * 3 + 1)->gpu());  
+                    float* keypoints = static_cast<float*>(engine->output(layer * 3 + 2)->gpu()); 
+
+                    // float* scores = static_cast<float*>(engine->output(layer * 3 + 0)->to_gpu(true).get_data()->gpu());  
+                    // float* bboxes = static_cast<float*>(engine->output(layer * 3 + 1)->to_gpu(true).get_data()->gpu());  
+                    // float* keypoints = static_cast<float*>(engine->output(layer * 3 + 2)->to_gpu(true).get_data()->gpu());   
+
+                    int num_anchors = anchors[layer].size();  
+                    int num_blocks = (num_anchors + threads_per_block - 1) / threads_per_block;  
+
+                    decode_and_map_all_layers<<<num_blocks, threads_per_block>>>(  
+                        scores, bboxes, keypoints, num_anchors,d_anchors[layer], strides[layer],  
+                        score_threshold, d_d2i, d_output_boxes, d_output_keypoints, d_valid_count); 
+
+                    cudaDeviceSynchronize();  
+                }  
+
+                // 调用 NMS 核函数 
+                cudaMemcpy(&valid_count, d_valid_count, sizeof(int), cudaMemcpyDeviceToHost);   
+                int num_blocks = (valid_count + threads_per_block - 1) / threads_per_block;  
+
+                nms_kernel<<<num_blocks, threads_per_block>>>(  
+                    d_output_boxes, valid_count, iou_threshold, d_keep, d_keep_count);  
+
+                // 拷贝结果回 CPU
+                cudaMemcpy(&keep_count, d_keep_count, sizeof(int), cudaMemcpyDeviceToHost);    
+                std::vector<int> keep(keep_count);  
+                cudaMemcpy(keep.data(), d_keep, keep_count * sizeof(int), cudaMemcpyDeviceToHost);  
+
+                // 构造最终结果  
+                IScrfd::BoxArray final_boxes;  
+
+                // 分配 CPU 内存用于存储从 GPU 拷贝的数据  
+                std::vector<float> h_output_boxes(valid_count * 5);  // 每个检测框有 6 个值  
+                std::vector<float> h_output_keypoints(valid_count * 10);  // 每个检测框有 5 个关键点，每个关键点有 2 个值  
+
+                // 从 GPU 拷贝检测框和关键点数据到 CPU  
+                cudaMemcpy(h_output_boxes.data(), d_output_boxes, valid_count * 5 * sizeof(float), cudaMemcpyDeviceToHost);  
+                cudaMemcpy(h_output_keypoints.data(), d_output_keypoints, valid_count * 10 * sizeof(float), cudaMemcpyDeviceToHost);  
+
+                // 遍历保留的检测框索引  
+                for (int idx : keep) {  
+                    if (idx >= valid_count) continue;  // 确保索引不越界  
+
+                    // 构造 Box 对象  
+                    IScrfd::Box box;  
+                    box.left = h_output_boxes[idx * 5 + 0];  
+                    box.top = h_output_boxes[idx * 5 + 1];  
+                    box.right = h_output_boxes[idx * 5 + 2];  
+                    box.bottom = h_output_boxes[idx * 5 + 3];  
+                    box.confidence = h_output_boxes[idx * 5 + 4];  
+
+                    // 添加关键点  
+                    for (int k = 0; k < 5; ++k) {  
+                        float kp_x = h_output_keypoints[idx * 10 + k * 2 + 0];  
+                        float kp_y = h_output_keypoints[idx * 10 + k * 2 + 1];  
+                        box.keypoints.emplace_back(kp_x, kp_y);  
+                    }  
+
+                    // 将 Box 添加到结果列表  
+                    final_boxes.push_back(box);  
+                }
+
+                ///////////////// 后处理 gpu//////////////////////
+                // int count     = min(MAX_IMAGE_BBOX, (int)boxes.size());
                 auto& job     = fetch_jobs[0];
-                job.output = boxes;
+                job.output = final_boxes;
                 // // 输出结果  
                 // for (const auto& box : boxes) {  
                 //     std::cout << "Score: " << box.confidence << "\n";  
@@ -2190,8 +2411,10 @@ IScrfd::BoxArray scrfd_postprocess(
                 //         // }
                 //         image_based_boxes.emplace_back(det.bbox[0], det.bbox[1], det.bbox[2], det.bbox[3], pbox[4], label);
                 //     }
-                job.pro->set_value(boxes);
+                job.pro->set_value(final_boxes);
                 fetch_jobs.clear();
+                cudaMemset(d_valid_count, 0, sizeof(int));  
+                cudaMemset(d_keep_count, 0, sizeof(int)); 
             }
             stream_ = nullptr;
             tensor_allocator_.reset();
