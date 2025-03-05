@@ -237,8 +237,8 @@ target_link_libraries(face_id_app face_id_thread
 
 
 # ---------------for detection test---------------------#
-add_executable(faceID ${PROJECT_SOURCE_DIR}/src/faceID.cpp)
-target_link_libraries(faceID  scrfd_cuda
+add_executable(face_detect_test ${PROJECT_SOURCE_DIR}/src/face_detect_test.cpp)
+target_link_libraries(face_detect_test  scrfd_cuda
                                 jsoncpp
                                 glog
                                 pthread

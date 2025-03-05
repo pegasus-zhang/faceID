@@ -25,3 +25,13 @@ Orin NX, 森云鱼眼相机
     ```
 * 运行程序  
 ``` ./run.sh```
+
+## 人脸检测，人体检测测试
+* 单帧图像测试
+    ```
+    ./workspace/face_detect_test -p ./data/face_detection -m ./weights/det_10g.engine --fp16 --show --pause
+    ```
+* ros测试
+    ```
+    ./workspace/face_detect_test -p ./data/face_detection -m ./weights/det_10g.engine --fp16 --show --ros
+    ```
