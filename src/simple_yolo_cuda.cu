@@ -1975,50 +1975,139 @@ IYolo::BoxArray parseYoloOutput(float* image_based_output, int num_predictions, 
 
 
 // 计算 IoU（交并比）  
-float computeIoU(const IYolo::Box& a, const IYolo::Box& b) {  
-    float inter_left = std::max(a.left, b.left);  
-    float inter_top = std::max(a.top, b.top);  
-    float inter_right = std::min(a.right, b.right);  
-    float inter_bottom = std::min(a.bottom, b.bottom);  
+// float computeIoU(const IYolo::Box& a, const IYolo::Box& b) {  
+//     float inter_left = std::max(a.left, b.left);  
+//     float inter_top = std::max(a.top, b.top);  
+//     float inter_right = std::min(a.right, b.right);  
+//     float inter_bottom = std::min(a.bottom, b.bottom);  
 
-    float inter_area = std::max(0.0f, inter_right - inter_left) * std::max(0.0f, inter_bottom - inter_top);  
-    float union_area = a.area() + b.area() - inter_area;  
+//     float inter_area = std::max(0.0f, inter_right - inter_left) * std::max(0.0f, inter_bottom - inter_top);  
+//     float union_area = a.area() + b.area() - inter_area;  
 
-    return inter_area / union_area;  
-}  
+//     return inter_area / union_area;  
+// }  
 
 // 非极大值抑制（NMS）  
-IYolo::BoxArray applyNMS(const IYolo::BoxArray& boxes, float iou_threshold) {  
-    IYolo::BoxArray result;  
+// IYolo::BoxArray applyNMS(const IYolo::BoxArray& boxes, float iou_threshold) {  
+//     IYolo::BoxArray result;  
 
-    // 按置信度从高到低排序  
-    std::vector<IYolo::Box> sorted_boxes = boxes;  
-    std::sort(sorted_boxes.begin(), sorted_boxes.end(), [](const IYolo::Box& a, const IYolo::Box& b) {  
-        return a.confidence > b.confidence;  
-    });  
+//     // 按置信度从高到低排序  
+//     std::vector<IYolo::Box> sorted_boxes = boxes;  
+//     std::sort(sorted_boxes.begin(), sorted_boxes.end(), [](const IYolo::Box& a, const IYolo::Box& b) {  
+//         return a.confidence > b.confidence;  
+//     });  
 
-    std::vector<bool> suppressed(sorted_boxes.size(), false);  
+//     std::vector<bool> suppressed(sorted_boxes.size(), false);  
 
-    for (size_t i = 0; i < sorted_boxes.size(); ++i) {  
-        if (suppressed[i]) continue;  
+//     for (size_t i = 0; i < sorted_boxes.size(); ++i) {  
+//         if (suppressed[i]) continue;  
 
-        const IYolo::Box& current_box = sorted_boxes[i];  
-        result.push_back(current_box);  
+//         const IYolo::Box& current_box = sorted_boxes[i];  
+//         result.push_back(current_box);  
 
-        for (size_t j = i + 1; j < sorted_boxes.size(); ++j) {  
-            if (suppressed[j]) continue;  
+//         for (size_t j = i + 1; j < sorted_boxes.size(); ++j) {  
+//             if (suppressed[j]) continue;  
 
-            // 计算 IoU  
-            float iou = computeIoU(current_box, sorted_boxes[j]);  
-            if (iou > iou_threshold) {  
-                suppressed[j] = true; // 抑制重叠框  
-            }  
+//             // 计算 IoU  
+//             float iou = computeIoU(current_box, sorted_boxes[j]);  
+//             if (iou > iou_threshold) {  
+//                 suppressed[j] = true; // 抑制重叠框  
+//             }  
+//         }  
+//     }  
+
+//     return result;  
+// } 
+
+
+__global__ void parseYoloOutputKernel(  
+    float* image_based_output, int num_predictions, float confidence_threshold,  
+    float* d2i, Box_cuda* boxes, int* box_count) {  
+
+    int idx = blockIdx.x * blockDim.x + threadIdx.x;  
+    if (idx >= num_predictions) return;  
+
+    // 提取边界框信息  
+    float x = image_based_output[idx + 0];  
+    float y = image_based_output[idx + 8400 * 1];  
+    float w = image_based_output[idx + 8400 * 2];  
+    float h = image_based_output[idx + 8400 * 3];  
+    float confidence = image_based_output[idx + 8400 * 4];  
+
+    // 如果置信度低于阈值，则跳过该框  
+    if (confidence < confidence_threshold) return;  
+
+    float left = x - w / 2;  
+    float top = y - h / 2;  
+    float right = x + w / 2;  
+    float bottom = y + h / 2;  
+
+    // 将边界框坐标从模型输出转换到图像坐标  
+    float left_img = left * d2i[0] + top * d2i[1] + d2i[2];  
+    float top_img = left * d2i[3] + top * d2i[4] + d2i[5];  
+    float right_img = right * d2i[0] + bottom * d2i[1] + d2i[2];  
+    float bottom_img = right * d2i[3] + bottom * d2i[4] + d2i[5];  
+
+    // 提取关键点信息（固定为 17 个关键点）  
+    Box_cuda::Keypoint keypoints[17];  
+    for (int j = 0; j < 17; ++j) {  
+        float kx = image_based_output[idx + (5 + j * 3 + 0) * 8400];  
+        float ky = image_based_output[idx + (5 + j * 3 + 1) * 8400];  
+        float kp_confidence = image_based_output[idx + (5 + j * 3 + 2) * 8400];  
+
+        // 将关键点坐标从模型输出转换到图像坐标  
+        float kx_img = kx * d2i[0] + ky * d2i[1] + d2i[2];  
+        float ky_img = kx * d2i[3] + ky * d2i[4] + d2i[5];  
+
+        // 保存关键点  
+        keypoints[j] = Box_cuda::Keypoint(kx_img, ky_img, kp_confidence);  
+    }  
+
+    // 创建 Box 对象  
+    Box_cuda box(left_img, top_img, right_img, bottom_img, confidence, keypoints);  
+
+    // 将 Box 写入全局内存  
+    int box_idx = atomicAdd(box_count, 1); // 原子操作，确保线程安全  
+    boxes[box_idx] = box;  
+}  
+
+
+// 计算 IoU 的 CUDA 核函数  
+__device__ float computeIoU(const Box_cuda& box1, const Box_cuda& box2) {  
+    float x1 = max(box1.left, box2.left);  
+    float y1 = max(box1.top, box2.top);  
+    float x2 = min(box1.right, box2.right);  
+    float y2 = min(box1.bottom, box2.bottom);  
+
+    float intersection = max(0.0f, x2 - x1) * max(0.0f, y2 - y1);  
+    float area1 = (box1.right - box1.left) * (box1.bottom - box1.top);  
+    float area2 = (box2.right - box2.left) * (box2.bottom - box2.top);  
+
+    return intersection / (area1 + area2 - intersection);  
+}  
+
+// NMS 核函数，保存保留框的索引  
+__global__ void nmsKernel(Box_cuda* boxes, int num_boxes, float iou_threshold, int* keep_indices, int* d_keep_count) {  
+    int idx = blockIdx.x * blockDim.x + threadIdx.x;  
+    if (idx >= num_boxes) return;  
+
+    Box_cuda current_box = boxes[idx];  
+
+    for (int i = 0; i < num_boxes; ++i) {  
+        if (i == idx) continue;  
+
+        float iou = computeIoU(current_box, boxes[i]);  
+        if (iou > iou_threshold && current_box.confidence < boxes[i].confidence) {  
+            return;  
         }  
     }  
 
-    return result;  
-} 
-    class YoloTRTInferImpl : public Infer, public ThreadSafedAsyncInferImpl{
+    // 如果当前框被保留，记录其索引  
+    int keep_idx = atomicAdd(d_keep_count, 1); // 原子操作，安全更新保留框计数  
+    keep_indices[keep_idx] = idx; // 保存保留框的索引  
+}  
+
+class YoloTRTInferImpl : public Infer, public ThreadSafedAsyncInferImpl{
     public:
 
         /** 要求在TRTInferImpl里面执行stop，而不是在基类执行stop **/
@@ -2059,6 +2148,18 @@ IYolo::BoxArray applyNMS(const IYolo::BoxArray& boxes, float iou_threshold) {
             Tensor output_array_device;
             int max_batch_size = engine->get_max_batch_size();
             auto input         = engine->tensor("images");
+            float* d_d2i;
+            float* d_image_based_output;
+            Box_cuda* d_boxes;  
+            int* d_box_count,*d_keep_count;
+            int* d_keep_indices;
+            int box_count,keep_count; 
+            Box_cuda* h_boxes = new Box_cuda[1024];  
+            int* h_keep_indices = new int[1024];  
+            cudaMalloc(&d_keep_indices, 1024 * sizeof(int));
+            cudaMalloc(&d_boxes, 1024 * sizeof(Box_cuda));  //最大输出框1024
+            cudaMalloc(&d_box_count, sizeof(int)); 
+            cudaMalloc(&d_keep_count, sizeof(int));   
             // auto output        = engine->tensor("output0");
             // int num_classes    = output->size(1) - 4;
 
@@ -2092,52 +2193,67 @@ IYolo::BoxArray applyNMS(const IYolo::BoxArray& boxes, float iou_threshold) {
                 for(int ibatch = 0; ibatch < infer_batch_size; ++ibatch){
                     auto& job  = fetch_jobs[ibatch];
                     auto& mono = job.mono_tensor->data();
-                    affin_matrix_device.copy_from_gpu(affin_matrix_device.offset(ibatch), mono->get_workspace()->gpu(), 6);
+                    // affin_matrix_device.copy_from_gpu(affin_matrix_device.offset(ibatch), mono->get_workspace()->gpu(), 6);
                     input->copy_from_gpu(input->offset(ibatch), mono->gpu(), mono->count());
                     job.mono_tensor->release();
                 }
                 engine->forward(false);
-                float* image_based_output = static_cast<float*>(engine->output(0)->to_cpu(true).get_data()->cpu());
-                // 解析推理结果  
-                IYolo::BoxArray boxes = parseYoloOutput(image_based_output, num_predictions, num_keypoints, confidence_threshold, fetch_jobs[0].additional.d2i);  
 
-                // 应用 NMS  
-                IYolo::BoxArray final_boxes = applyNMS(boxes, iou_threshold); 
+                ///////////////////////// cpu inference///////////////////////
+                // float* image_based_output = static_cast<float*>(engine->output(0)->to_cpu(true).get_data()->cpu());
+                // // 解析推理结果  
+                // IYolo::BoxArray boxes = parseYoloOutput(image_based_output, num_predictions, num_keypoints, confidence_threshold, fetch_jobs[0].additional.d2i);  
 
-                // // 输出解析结果  
-                // for (const auto& box : final_boxes) {  
-                //     std::cout << "Box: [" << box.left << ", " << box.top << ", " << box.right << ", " << box.bottom << "]\n";  
-                //     std::cout << "Confidence: " << box.confidence << "\n";  
-                //     std::cout << "Keypoints:\n";  
-                //     for (const auto& kp : box.keypoints) {  
-                //         std::cout << "  (" << kp.point.x << ", " << kp.point.y << "), confidence: " << kp.confidence << "\n";  
-                //     }  
-                // }  
-                // output_array_device.to_gpu(false);
-                // for(int ibatch = 0; ibatch < infer_batch_size; ++ibatch){
+                // // 应用 NMS  
+                // IYolo::BoxArray final_boxes = applyNMS(boxes, iou_threshold); 
+                ///////////////////////// cpu inference///////////////////////
+
+                d_image_based_output = static_cast<float*>(engine->output(0)->gpu());
+                d_d2i = static_cast<float*>(fetch_jobs[0].mono_tensor->data()->get_workspace()->gpu());
+                int threads_per_block = 512;
+                int blocks_per_grid = (num_predictions + threads_per_block - 1) / threads_per_block; 
+                cudaMemset(d_box_count, 0, sizeof(int));
+                cudaMemset(d_keep_count, 0, sizeof(int));   
+                parseYoloOutputKernel<<<blocks_per_grid, threads_per_block>>>(  
+                    d_image_based_output, num_predictions, confidence_threshold, d_d2i, d_boxes, d_box_count);
                     
-                //     auto& job                 = fetch_jobs[ibatch];
-                //     float* image_based_output = output->gpu<float>(ibatch);
-                //     float* output_array_ptr   = output_array_device.gpu<float>(ibatch);
-                //     auto affine_matrix        = affin_matrix_device.gpu<float>(ibatch);
-                //     checkCudaRuntime(cudaMemsetAsync(output_array_ptr, 0, sizeof(int), stream_));
-                //     decode_kernel_invoker(image_based_output, output->size(2), num_classes, confidence_threshold_, nms_threshold_, affine_matrix, output_array_ptr, MAX_IMAGE_BBOX, stream_);
-                // }
+                cudaMemcpy(&box_count, d_box_count, sizeof(int), cudaMemcpyDeviceToHost);
+                int num_blocks = (box_count + threads_per_block - 1) / threads_per_block;    
+                 // 启动 NMS 核函数  
+                nmsKernel<<<num_blocks, threads_per_block>>>(d_boxes, box_count, iou_threshold, d_keep_indices, d_keep_count);  
 
-                // output_array_device.to_cpu();
-                // for(int ibatch = 0; ibatch < infer_batch_size; ++ibatch){
-                //     float* parray = output_array_device.cpu<float>(ibatch);
-                //     int count     = min(MAX_IMAGE_BBOX, (int)*parray);
-                //     auto& job     = fetch_jobs[ibatch];
-                //     auto& image_based_boxes   = job.output;
-                //     for(int i = 0; i < count; ++i){
-                //         float* pbox  = parray + 1 + i * NUM_BOX_ELEMENT;
-                //         int label    = pbox[5];
-                //         int keepflag = pbox[6];
-                //         if(keepflag == 1){
-                //             image_based_boxes.emplace_back(pbox[0], pbox[1], pbox[2], pbox[3], pbox[4], label);
-                //         }
-                //     }
+                // 拷贝结果回 CPU  
+                cudaMemcpy(&box_count, d_box_count, sizeof(int), cudaMemcpyDeviceToHost);  
+                cudaMemcpy(&keep_count, d_keep_count, sizeof(int), cudaMemcpyDeviceToHost);  
+                // Box_cuda* h_boxes = new Box_cuda[box_count];  
+                // int* h_keep_indices = new int[keep_count];  
+
+                cudaMemcpy(h_boxes, d_boxes, box_count * sizeof(Box_cuda), cudaMemcpyDeviceToHost);  
+
+                cudaMemcpy(h_keep_indices, d_keep_indices, keep_count * sizeof(int), cudaMemcpyDeviceToHost);  
+
+                // 构造结果  
+                IYolo::BoxArray final_boxes;  
+                for (int i = 0; i < keep_count; ++i) {  
+                    // 将 Box_cuda 转换为 IYolo::Box  
+                    IYolo::Box box;  
+                    box.left = h_boxes[h_keep_indices[i]].left;  
+                    box.top = h_boxes[h_keep_indices[i]].top;  
+                    box.right = h_boxes[h_keep_indices[i]].right;  
+                    box.bottom = h_boxes[h_keep_indices[i]].bottom;  
+                    box.confidence = h_boxes[h_keep_indices[i]].confidence;  
+                
+                    // 转换关键点  
+                    for (int j = 0; j < 17; ++j) {  
+                        cv::Point2f point(h_boxes[h_keep_indices[i]].keypoints[j].x, h_boxes[h_keep_indices[i]].keypoints[j].y);  
+                        float kp_confidence = h_boxes[h_keep_indices[i]].keypoints[j].confidence;  
+                        box.keypoints.emplace_back(point, kp_confidence);  
+                    }  
+                
+                    // 添加到 final_boxes  
+                    final_boxes.push_back(box);  
+                }  
+
                 auto& job     = fetch_jobs[0];
                 job.output = final_boxes;
                 job.pro->set_value(final_boxes);

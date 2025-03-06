@@ -2280,7 +2280,7 @@ class ScrfdTRTInferImpl : public Infer, public ThreadSafedAsyncInferImpl{
                 for(int ibatch = 0; ibatch < infer_batch_size; ++ibatch){
                     auto& job  = fetch_jobs[ibatch];
                     auto& mono = job.mono_tensor->data();
-                    affin_matrix_device.copy_from_gpu(affin_matrix_device.offset(ibatch), mono->get_workspace()->gpu(), 6);
+                    //affin_matrix_device.copy_from_gpu(affin_matrix_device.offset(ibatch), mono->get_workspace()->gpu(), 6);
                     input->copy_from_gpu(input->offset(ibatch), mono->gpu(), mono->count());
                     job.mono_tensor->release();
                 }
@@ -2302,8 +2302,9 @@ class ScrfdTRTInferImpl : public Infer, public ThreadSafedAsyncInferImpl{
                 ///////////////// 后处理 gpu//////////////////////
 
                 // 调用解码核函数 
-                cudaMemcpy(d_d2i, fetch_jobs[0].additional.d2i, 6 * sizeof(float), cudaMemcpyHostToDevice);   
+                //cudaMemcpy(d_d2i, fetch_jobs[0].additional.d2i, 6 * sizeof(float), cudaMemcpyHostToDevice);   
                 int threads_per_block = 512;
+                d_d2i = static_cast<float*>(fetch_jobs[0].mono_tensor->data()->get_workspace()->gpu());
 
                 for (size_t layer = 0; layer < strides.size(); ++layer) {  
                     float* scores = static_cast<float*>(engine->output(layer * 3 + 0)->gpu());  
@@ -2321,7 +2322,7 @@ class ScrfdTRTInferImpl : public Infer, public ThreadSafedAsyncInferImpl{
                         scores, bboxes, keypoints, num_anchors,d_anchors[layer], strides[layer],  
                         score_threshold, d_d2i, d_output_boxes, d_output_keypoints, d_valid_count); 
 
-                    cudaDeviceSynchronize();  
+                    //cudaDeviceSynchronize();  
                 }  
 
                 // 调用 NMS 核函数 

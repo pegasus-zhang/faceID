@@ -8,14 +8,14 @@
             "name": "(gdb) Launch",
             "type": "cppdbg",
             "request": "launch",
-            "program": "${workspaceFolder}/workspace/faceID",
+            "program": "${workspaceFolder}/workspace/face_detect_test",
             "args": [
                 "-p",
-                "./data",
+                "./data/face_detection",
                 "-m",
                 "./weights/det_10g.engine",
                 "--fp16",
-                // "--show",
+                "--show",
                 "--pause",
                 // "--ros"
             ],
