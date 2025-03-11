@@ -134,8 +134,8 @@ int main(int argc,char* argv[])
     cmd_parser.add("compile",'\0',"build engine");
     cmd_parser.add("video",'\0',"input is video file");
     cmd_parser.add("ros",'\0',"input is ros msg");
-    cmd_parser.add<double>("confidence",'\0',"confidence threshold",false,0.4f);
-    cmd_parser.add<double>("nms",'\0',"nms threshold",false,0.4f);
+    cmd_parser.add<double>("confidence",'\0',"confidence threshold",false,0.6f);
+    cmd_parser.add<double>("nms",'\0',"nms threshold",false,0.5f);
     cmd_parser.add<std::string>("roi",'\0',"set roi, separate with comma. for example, x,y,width,height",false);
     cmd_parser.add<std::string>("resize",'\0',"resize image, separate with comma. for example, width,height",false);
     cmd_parser.add("show",'\0',"show result flag");

@@ -2181,8 +2181,8 @@ class YoloTRTInferImpl : public Infer, public ThreadSafedAsyncInferImpl{
 
             const int num_predictions = 8400; // 总预测框数量  
             const int num_keypoints = 17;     // 每个框的关键点数量  
-            float confidence_threshold = 0.5; // 置信度阈值  
-            float iou_threshold = 0.3;        // IoU 阈值 
+            // float confidence_threshold = 0.5; // 置信度阈值  
+            // float iou_threshold = 0.3;        // IoU 阈值 
 
             vector<Job> fetch_jobs;
             while(get_jobs_and_wait(fetch_jobs, max_batch_size)){
@@ -2215,12 +2215,12 @@ class YoloTRTInferImpl : public Infer, public ThreadSafedAsyncInferImpl{
                 cudaMemset(d_box_count, 0, sizeof(int));
                 cudaMemset(d_keep_count, 0, sizeof(int));   
                 parseYoloOutputKernel<<<blocks_per_grid, threads_per_block>>>(  
-                    d_image_based_output, num_predictions, confidence_threshold, d_d2i, d_boxes, d_box_count);
+                    d_image_based_output, num_predictions, confidence_threshold_, d_d2i, d_boxes, d_box_count);
                     
                 cudaMemcpy(&box_count, d_box_count, sizeof(int), cudaMemcpyDeviceToHost);
                 int num_blocks = (box_count + threads_per_block - 1) / threads_per_block;    
                  // 启动 NMS 核函数  
-                nmsKernel<<<num_blocks, threads_per_block>>>(d_boxes, box_count, iou_threshold, d_keep_indices, d_keep_count);  
+                nmsKernel<<<num_blocks, threads_per_block>>>(d_boxes, box_count, nms_threshold_, d_keep_indices, d_keep_count);  
 
                 // 拷贝结果回 CPU  
                 cudaMemcpy(&box_count, d_box_count, sizeof(int), cudaMemcpyDeviceToHost);  

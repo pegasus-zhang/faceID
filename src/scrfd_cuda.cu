@@ -2291,8 +2291,8 @@ class ScrfdTRTInferImpl : public Infer, public ThreadSafedAsyncInferImpl{
             //     }
 
                 // 后处理参数  
-                float score_threshold = 0.5;  
-                float iou_threshold = 0.3;  
+                // float score_threshold = 0.5;  
+                // float iou_threshold = 0.3;  
 
                 // // // 后处理 cpu
                 // IScrfd::BoxArray boxes = scrfd_postprocess(  
@@ -2320,7 +2320,7 @@ class ScrfdTRTInferImpl : public Infer, public ThreadSafedAsyncInferImpl{
 
                     decode_and_map_all_layers<<<num_blocks, threads_per_block>>>(  
                         scores, bboxes, keypoints, num_anchors,d_anchors[layer], strides[layer],  
-                        score_threshold, d_d2i, d_output_boxes, d_output_keypoints, d_valid_count); 
+                        confidence_threshold_, d_d2i, d_output_boxes, d_output_keypoints, d_valid_count); 
 
                     //cudaDeviceSynchronize();  
                 }  
@@ -2330,7 +2330,7 @@ class ScrfdTRTInferImpl : public Infer, public ThreadSafedAsyncInferImpl{
                 int num_blocks = (valid_count + threads_per_block - 1) / threads_per_block;  
 
                 nms_kernel<<<num_blocks, threads_per_block>>>(  
-                    d_output_boxes, valid_count, iou_threshold, d_keep, d_keep_count);  
+                    d_output_boxes, valid_count, nms_threshold_, d_keep, d_keep_count);  
 
                 // 拷贝结果回 CPU
                 cudaMemcpy(&keep_count, d_keep_count, sizeof(int), cudaMemcpyDeviceToHost);    
