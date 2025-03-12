@@ -26,6 +26,19 @@ void CmdListener::start() {
 void CmdListener::cmdCallback(const perception_msgs::PercCmd::ConstPtr& msg) {
     if (msg->perc_kind == msg->PERC_FOLLOW || msg->perc_kind == msg->PERC_WELCOME_DEMO || msg->perc_kind == msg->PERC_LOBBY_DEMO) {
         std::string host_name = GetChineseName(msg->follow_name);
+        ROS_INFO("Receieve host_name: %s", host_name.c_str());
+        std::vector<std::string> name_list;
+        face_detect_thread_.GetNameList(name_list);
+        auto result = find_similar_name_ignore_first(host_name, name_list);
+        if(result.second < 0.6)
+        {
+            ROS_INFO("No similar name found, please check the name: %s", host_name.c_str());
+            host_name = "unknown";
+        }
+        else
+        {
+            host_name = result.first;
+        }
         ROS_INFO("Set host_name: %s", host_name.c_str());
         face_detect_thread_.SetHostName(host_name);
         face_detect_thread_.resume();

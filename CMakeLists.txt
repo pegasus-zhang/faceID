@@ -211,12 +211,15 @@ SET_TARGET_PROPERTIES (face_id_thread PROPERTIES VERSION "${_app_version_}")
 
 add_executable(face_id_app ${PROJECT_SOURCE_DIR}/src/main.cpp
                             ${PROJECT_SOURCE_DIR}/src/cmd_listener.cpp
-                            ${PROJECT_SOURCE_DIR}/src/myPinyin.cpp)
+                            ${PROJECT_SOURCE_DIR}/src/myPinyin.cpp
+                            ${PROJECT_SOURCE_DIR}/src/name_matching.cpp
+                            )
 target_link_libraries(face_id_app face_id_thread
                                     glog  
                                     ${catkin_LIBRARIES}   
 )
 
+# add_executable(name_matching_test ${PROJECT_SOURCE_DIR}/src/name_matching.cpp)
 
 # add_executable(face_id_thread_test src/face_id_thread.cpp)
 # target_link_libraries(face_id_thread_test   face_id_thread      

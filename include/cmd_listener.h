@@ -6,7 +6,7 @@
 #include <perception_msgs/PercCmd.h>
 #include <std_msgs/String.h>
 #include "face_id_thread.h"
-
+#include "name_matching.h"
 class CmdListener {
 public:
     CmdListener();

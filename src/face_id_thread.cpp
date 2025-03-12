@@ -292,6 +292,15 @@ void FaceDetectThread::Camera2Robot(const std::vector<cv::Point3f>&foot_point_ca
     }
 }
 
+int FaceDetectThread::GetNameList(std::vector<std::string>& name_list)
+{
+    if(nullptr == face_recognizer_ )
+    {
+        return -1;
+    }
+    return face_recognizer_->GetNameList(name_list);
+}
+
 
 int main(int argc, char** argv)
 {

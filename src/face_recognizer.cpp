@@ -121,3 +121,12 @@ int FaceRecognizer::GetName2IDDict(nlohmann::json& name2id_dic) {
     name2id_dic = name2id_dic_;
     return 0; // 返回0表示成功
 }
+
+int FaceRecognizer::GetNameList(std::vector<std::string>& name_list)
+{
+    //name2id_dic_ = name2id_dic;
+    for (const auto& item : name2id_dic_.items()) {
+        name_list.push_back(item.key());
+    }
+    return 0; // 返回0表示成功
+}

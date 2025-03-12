@@ -26,6 +26,7 @@ public:
     int DetectFace(const cv::cuda::GpuMat& img,FaceInfo& face_info);
     int SetName2IDDict(const nlohmann::json& name2id_dic);
     int GetName2IDDict(nlohmann::json& name2id_dic);
+    int GetNameList(std::vector<std::string>& name_list);
 private:
     nlohmann::json config_;
     std::shared_ptr<ScrfdGpu::IScrfd> face_detector_ = nullptr;

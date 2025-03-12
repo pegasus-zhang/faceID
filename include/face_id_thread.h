@@ -34,4 +34,5 @@ public:
     int SetHostName(std::string host_name);
     std::string GetHostName();
     int FlipPrintFlag();
+    int GetNameList(std::vector<std::string>& name_list);
 };
