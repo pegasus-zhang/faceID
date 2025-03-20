@@ -2875,9 +2875,11 @@ class ScrfdTRTInferImpl : public Infer, public ThreadSafedAsyncInferImpl{
             return -1;
         }
         //warmup
-        cv::cuda::GpuMat mat(640, 640, CV_8UC3);
+        cv::cuda::GpuMat mat(1920, 1536, CV_8UC3);
         mat.setTo(cv::Scalar(0));
-        // this->Inference(mat).get();
+        this->Inference(mat).get();
+        this->Inference(mat).get();
+        this->Inference(mat).get();
 
         return 0;
     }

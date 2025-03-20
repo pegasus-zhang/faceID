@@ -2752,6 +2752,13 @@ class YoloTRTInferImpl : public Infer, public ThreadSafedAsyncInferImpl{
             INFOF("Engine is nullptr\n");
             return -1;
         }
+
+        //warmup
+        cv::cuda::GpuMat mat(1920, 1536, CV_8UC3);
+        mat.setTo(cv::Scalar(0));
+        this->Inference(mat).get();
+        this->Inference(mat).get();
+        this->Inference(mat).get();
         return 0;
     }
     
