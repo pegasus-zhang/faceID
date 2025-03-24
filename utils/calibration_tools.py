@@ -45,9 +45,9 @@ def draw_line(img,calibrate_points_img):
 
 class ImageUndistort:
     def __init__(self,K,D,width,height):
-        self.h, self.w = 1536,1920
-        self.K = np.array([[511.3623953605, 0.0, 945.0244978431],[0, 511.4026186026, 775.5020771799],[0, 0, 1]],dtype=np.float32,)
-        self.D = np.array([0.1347717201, -0.0338054641, -0.0023963342, 0.0011715332],dtype=np.float32)
+        self.h, self.w = height,width
+        self.K = K
+        self.D = D
 
         # 计算去畸变和校正的映射矩阵
         self.new_K = cv2.fisheye.estimateNewCameraMatrixForUndistortRectify(self.K, self.D, (self.w, self.h), None)
@@ -103,26 +103,57 @@ def click_event(event, x, y, flags, param):
         cv2.circle(img_copy, point, 5, (0, 255, 0), -1)
     cv2.imshow(window_name, img_copy)
 
+# def get_four_points(points):
+#     # Take the first four points
+#     points = points[:4]
+    
+#     # Convert to numpy array
+#     points = np.array(points)
+    
+#     # Sort the points based on y-coordinate, then x-coordinate
+#     sorted_points = sorted(points, key=lambda p: (p[1], p[0]))
+    
+#     # Assuming the points are in the order of top-left, top-right, bottom-left, bottom-right
+#     top_left = sorted_points[0]
+#     top_right = sorted_points[1]
+#     bottom_left = sorted_points[2]
+#     bottom_right = sorted_points[3]
+    
+#     # Combine the points into a single numpy array
+#     result = np.array([top_left, top_right, bottom_left, bottom_right])
+    
+#     return result
+
 def get_four_points(points):
-    # Take the first four points
-    points = points[:4]
+    """
+    按照左上角、右上角、左下角、右下角的顺序排序点。
     
-    # Convert to numpy array
-    points = np.array(points)
+    参数：
+        points: 点列表，每个点为 (x, y) 元组。如果点数大于4个，则仅取前4个点。
     
-    # Sort the points based on y-coordinate, then x-coordinate
-    sorted_points = sorted(points, key=lambda p: (p[1], p[0]))
+    返回：
+        按照 (左上角, 右上角, 左下角, 右下角) 顺序排列的点列表。
+    """
+    # 如果输入点数大于4个，则取前4个
+    if len(points) > 4:
+        points = points[:4]
     
-    # Assuming the points are in the order of top-left, top-right, bottom-left, bottom-right
-    top_left = sorted_points[0]
-    top_right = sorted_points[1]
-    bottom_left = sorted_points[2]
-    bottom_right = sorted_points[3]
+    if len(points) != 4:
+        raise ValueError("必须提供4个点！")
     
-    # Combine the points into a single numpy array
-    result = np.array([top_left, top_right, bottom_left, bottom_right])
+    # 先按照 y 坐标排序，y 值越小的点越靠上
+    sorted_by_y = sorted(points, key=lambda p: (p[1], p[0]))
     
-    return result
+    # 顶部两个点（y 值较小的）和底部两个点（y 值较大的）
+    top_points = sorted_by_y[:2]
+    bottom_points = sorted_by_y[2:]
+    
+    # 对顶部两个点按照 x 坐标排序，x 值较小的是左侧
+    top_left, top_right = sorted(top_points, key=lambda p: p[0])
+    # 对底部两个点按照 x 坐标排序
+    bottom_left, bottom_right = sorted(bottom_points, key=lambda p: p[0])
+    
+    return [top_left, top_right, bottom_left, bottom_right]
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser() 
@@ -132,7 +163,7 @@ if __name__ == '__main__':
                         help='open calibration mode')
     parser.add_argument('--save', action='store_true',
                         help='save calibration result')
-    parser.add_argument('--config', type=str, default= "../config/blue_dog.json",
+    parser.add_argument('--config', type=str, default= "../config/default.json",
                         help='config file path')
     opt = parser.parse_args()
     
@@ -237,9 +268,13 @@ if __name__ == '__main__':
                 print("target_point_img: ",target_point_img)
                 target_point_img = np.array(target_point_img, dtype=np.float64).reshape(-1, 1, 2)
                 target_point = ipm.get_3d_pos(target_point_img)
-                print("used time(s): ",time.time()-start_time)
-                print("target_point_img: ",target_point_img)
-                print("target_point: ",target_point)
+                print(f"\033[31mused time(s): {time.time()-start_time} \033[0m")
+                print(f"\033[31mtarget_point_img: {target_point_img} \033[0m")
+                print(f"\033[31mtarget_point:{target_point} \033[0m")
+                cv2.namedWindow('img_undistort',cv2.WINDOW_NORMAL)
+                cv2.imshow("img_undistort",img_undistort)
+                print("PERPECTIVE_MATRIX: ",PERPECTIVE_MATRIX)
+                print("TARGET_SIZE: ",TARGET_SIZE)
                 trasform_img = img_perspect_transform(img_undistort,PERPECTIVE_MATRIX,TARGET_SIZE)
                 cv2.namedWindow('trasform_img',cv2.WINDOW_NORMAL)
                 cv2.imshow('trasform_img',trasform_img)
