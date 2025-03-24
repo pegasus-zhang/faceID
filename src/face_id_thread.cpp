@@ -8,6 +8,8 @@
 #include "ros_interface/FaceList.h"
 #include <cv_bridge/cv_bridge.h>
 #include <sys/stat.h>
+#include "median_filter.h"
+
 typedef nlohmann::json json;
 FaceDetectThread::FaceDetectThread(/* args */)
 {
@@ -17,9 +19,38 @@ FaceDetectThread::~FaceDetectThread()
 {
 }
 
+struct EulerAngles {
+    double roll;
+    double pitch;
+    double yaw;
+};
+
+EulerAngles ToEulerAngles(const Eigen::Quaterniond& q) {
+    EulerAngles angles;
+
+    // roll (x-axis rotation)
+    double sinr_cosp = 2 * (q.w() * q.x() + q.y() * q.z());
+    double cosr_cosp = 1 - 2 * (q.x() * q.x() + q.y() * q.y());
+    angles.roll = std::atan2(sinr_cosp, cosr_cosp);
+
+    // pitch (y-axis rotation)
+    double sinp = 2 * (q.w() * q.y() - q.z() * q.x());
+    if (std::abs(sinp) >= 1)
+        angles.pitch = std::copysign(M_PI / 2, sinp); // use 90 degrees if out of range
+    else
+        angles.pitch = std::asin(sinp);
+
+    // yaw (z-axis rotation)
+    double siny_cosp = 2 * (q.w() * q.z() + q.x() * q.y());
+    double cosy_cosp = 1 - 2 * (q.y() * q.y() + q.z() * q.z());
+    angles.yaw = std::atan2(siny_cosp, cosy_cosp);
+
+    return angles;
+}
+
 void FaceDetectThread::run()
 {
-    ros::Rate rate(3); // 5 Hz
+    ros::Rate rate(5); // 5 Hz
     int num_all = 0;
     double all_used_times = 0.0;
     double used_times_mean = 0.0;
@@ -27,6 +58,11 @@ void FaceDetectThread::run()
     bool first_flag = true;
     face_recognizer_->GetName2IDDict(name2id_dict);
     cv::Mat camera2robot_extrinsic = jsonToCvMat(config_["camera_parameter"]["camera2robot_extrinsic"],4,4,2);
+    geometry_msgs::PoseStamped host_pos_msg;
+    if(config_["debug_parameters"]["show_flag"])
+    {
+        cv::namedWindow("Detected Faces",cv::WINDOW_NORMAL);
+    }
     while (!is_stopped() && ros::ok()) {
         // 处理挂起逻辑
         std::unique_lock<std::mutex> lock(cv_mtx_);
@@ -41,8 +77,17 @@ void FaceDetectThread::run()
 
         // std::cout << "Thread is running custom logic." << std::endl;
         cv::cuda::GpuMat gpu_frame;
-        ros::Time timestamp;
-        ros_adapter_->GetImage(gpu_frame,timestamp);
+        ros::Time frame_timestamp;
+        int image_ret = ros_adapter_->GetImage(gpu_frame,frame_timestamp);
+        if(image_ret != 0)
+        {
+            continue;
+        }
+        Eigen::Vector3d odom_pos;
+        Eigen::Quaterniond odom_quat;
+        ros::Time odom_timestamp;
+        ros_adapter_->GetOdom(odom_pos,odom_quat,odom_timestamp); 
+
         // 检测人脸并提取特征
         FaceInfo face_infos;
         face_recognizer_->DetectFace(gpu_frame, face_infos);
@@ -50,8 +95,11 @@ void FaceDetectThread::run()
         int width = config_["camera_parameter"]["image_size"][0];   // 获取宽度
         int height = config_["camera_parameter"]["image_size"][1];  // 获取高度
         ros_interface::FaceList face_lists;
-        face_lists.header.stamp = timestamp;
+        face_lists.header.stamp = frame_timestamp;
         std::vector<cv::Point2f> foot_point_pixel;
+
+        host_pos_msg.header.stamp = frame_timestamp;
+
         for (size_t i = 0; i < face_infos.face_ids.size(); ++i) 
         {
             std::string host_name = GetHostName();
@@ -84,16 +132,38 @@ void FaceDetectThread::run()
                 //camera坐标转robot坐标
                 std::vector<cv::Point3f> foot_point_robot;
                 Camera2Robot(foot_point_camera,camera2robot_extrinsic,foot_point_robot);
-                if (0 == ret)
+                // std::cout<<"camera2robot_extrinsic: "<<camera2robot_extrinsic;
+                //&& foot_point_robot[0].x < 5.0 && foot_point_robot[0].x > 0.0 && fabs(foot_point_robot[0].y) < 5.0
+                if (0 == ret ) // 深度大于5m的点滤掉
                 {
+                    // face.center_point_abs.x = foot_point_robot[0].x;
+                    // face.center_point_abs.y = foot_point_robot[0].y;
+                    // face.center_point_abs.z = foot_point_robot[0].z;
+                    // 目标位置在机器狗坐标系下的坐标
+                    Eigen::Vector3d target_in_robot(foot_point_robot[0].x, foot_point_robot[0].y, foot_point_robot[0].z);
+
+                    // 计算目标位置在世界坐标系下的坐标
+                    Eigen::Vector3d target_in_world = odom_quat * target_in_robot + odom_pos; 
+                    host_pos_msg.pose.position.x = target_in_world[0];
+                    host_pos_msg.pose.position.y = target_in_world[1];
+                    host_pos_msg.pose.position.z = target_in_world[2];
+
                     face.center_point_abs.x = foot_point_robot[0].x;
                     face.center_point_abs.y = foot_point_robot[0].y;
-                    face.center_point_abs.z = foot_point_robot[0].z;
+                    face.center_point_abs.z = foot_point_robot[0].z;                    
                     face_lists.face.push_back(face);
                     if(print_flag_)
                     {
+                        // 输出转换后的目标位置
+                        ROS_INFO("Delta time: %f", odom_timestamp.toSec() - frame_timestamp.toSec());
+                        ROS_INFO("Position: x: %f, y: %f, z: %f", odom_pos[0], odom_pos[1], odom_pos[2]);
+                        ROS_INFO("Orientation: x: %f, y: %f, z: %f, w: %f", odom_quat.x(), odom_quat.y(), odom_quat.z(), odom_quat.w());
+                        EulerAngles euler_angle = ToEulerAngles(odom_quat);
+                        ROS_INFO("Orientation: r: %f, p: %f, y: %f", euler_angle.roll, euler_angle.pitch, euler_angle.yaw);
                         ROS_INFO("Detected face: %s, Confidence: %.2f, 3d pos(camera): (%f, %f, %f)", face.name.c_str(), face.confidence, foot_point_camera[0].x, foot_point_camera[0].y, foot_point_camera[0].z);
-                        ROS_INFO("Detected face: %s, Confidence: %.2f, 3d pos(robot): (%f, %f, %f)", face.name.c_str(), face.confidence, face.center_point_abs.x, face.center_point_abs.y, face.center_point_abs.z);
+                        ROS_INFO("Detected face: %s, Confidence: %.2f, 3d pos(robot): (%f, %f, %f)", face.name.c_str(), face.confidence, foot_point_robot[0].x, foot_point_robot[0].y, foot_point_robot[0].z);
+                        ROS_INFO("Detected face: %s, Confidence: %.2f, 3d pos(world): (%f, %f, %f)", face.name.c_str(), face.confidence, target_in_world[0], target_in_world[1], target_in_world[2]);
+                        std::cout<<std::endl;
                     }
                 }
                 //实现启动后ros只发送一次原图
@@ -167,6 +237,7 @@ void FaceDetectThread::run()
             // cv::imwrite("/home/jetson/workspace/faceID_jzb/data/backup/frame_1733835120220579455_result.png", cpu_img);
         }
         pub_.publish(face_lists);
+        pub_pos_world_.publish(host_pos_msg);
         
         auto time_end = std::chrono::high_resolution_clock::now();
         auto used_time = std::chrono::duration<double>(time_end - time_start).count();
@@ -192,6 +263,7 @@ int FaceDetectThread::Init(nlohmann::json config)
         ros_adapter_ = std::make_unique<Ros1Adapter>(); 
         pub_ = nh.advertise<ros_interface::FaceList>("/perception/result/FaceList", 1);
         pub_img_ = nh.advertise<sensor_msgs::CompressedImage>("/cam_front/csi_cam/welcome_image", 1);
+        pub_pos_world_ = nh.advertise<geometry_msgs::PoseStamped>("/perception/result/HostPosWorld", 1);
  
     #endif  
 
@@ -204,7 +276,7 @@ int FaceDetectThread::Init(nlohmann::json config)
         std::cerr << "No ROS version enabled. Define either ROS_ENABLE or ROS2_ENABLE." << std::endl;  
         return 1;  
     } 
-    ros_adapter_->Init("faceID", config["camera_parameter"]["fisheye_rostopic"], 1); 
+    ros_adapter_->Init("faceID", config["camera_parameter"]["fisheye_rostopic"], 1);
     face_recognizer_ = std::make_shared<FaceRecognizer>();
     face_recognizer_->Init(config);
     body_detector_ = YoloGpu::IYoloManager::create();

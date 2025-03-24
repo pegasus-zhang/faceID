@@ -6,6 +6,7 @@
 #include <memory>
 #include "simple_yolo_cuda.h"
 #include "ipm.h"
+#include "geometry_msgs/PoseStamped.h"
 
 class FaceDetectThread: public MyThread
 {
@@ -21,6 +22,7 @@ private:
     std::mutex mutex_;
     ros::Publisher pub_;
     ros::Publisher pub_img_;
+    ros::Publisher pub_pos_world_;
     void GetFootPointPixel(const ScrfdGpu::IScrfd::Box& target_face_box,const YoloGpu::IYolo::BoxArray& body_boxes,std::vector<cv::Point2f>& foot_point_pixels);
     void Camera2Robot(const std::vector<cv::Point3f>&foot_point_camera,const cv::Mat& camera2robot_extrinsic,std::vector<cv::Point3f>& foot_point_robot);
 

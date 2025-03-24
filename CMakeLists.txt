@@ -51,8 +51,11 @@ if(ENABLE_ROS1)
         rosconsole  
         sensor_msgs
         cv_bridge
-        image_transport  
-    )  
+        image_transport
+        nav_msgs  
+        message_filters
+        geometry_msgs
+    ) 
     include_directories(${catkin_INCLUDE_DIRS})  
     link_directories(${catkin_LIBRARY_DIRS}) 
     find_package(perception_msgs REQUIRED
@@ -110,6 +113,9 @@ if(With_CUDA)
     endif()
 endif()
 #CUDA
+
+#Eigen
+find_package(Eigen3 REQUIRED)
 
 # TensorRT
 option(With_TRT "Use TensorRT" ON)
