@@ -87,6 +87,10 @@ int FaceRecognizer::ExtractFeature(const std::vector<cv::cuda::GpuMat>& aligned_
 
 int FaceRecognizer::DetectExtractFeature(const cv::cuda::GpuMat& img, FaceInfo& face_info)
 {
+    if(img.empty())
+    {
+        return -1;
+    }
     // 检测人脸并提取特征
     ScrfdGpu::IScrfd::BoxArray boxes;
     boxes = face_detector_->Inference(img).get();
@@ -112,6 +116,12 @@ int FaceRecognizer::DetectFace(const cv::cuda::GpuMat& img, FaceInfo& face_info)
     ret = face_register_->SearchFace(face_info.features,config_["model_parameter"]["face_feature"]["confidence_threshold"], face_info.face_ids, face_info.scores);
     return ret; // 返回0表示成功
 }
+
+std::future<int> FaceRecognizer::DetectFaceAsync(const cv::cuda::GpuMat& img,FaceInfo& face_info)
+{
+    return std::async(std::launch::async, &FaceRecognizer::DetectFace, this, img, std::ref(face_info));
+}
+
 int FaceRecognizer::SetName2IDDict(const nlohmann::json& name2id_dic) {
     name2id_dic_ = name2id_dic;
     return 0; // 返回0表示成功

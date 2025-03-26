@@ -4,8 +4,6 @@
 #include <glog/logging.h>
 #include "cmdline.h"
 #include <fstream>
-#include "ros_interface/Face.h"
-#include "ros_interface/FaceList.h"
 #include <cv_bridge/cv_bridge.h>
 #include <sys/stat.h>
 #include "median_filter.h"
@@ -54,11 +52,18 @@ void FaceDetectThread::run()
     int num_all = 0;
     double all_used_times = 0.0;
     double used_times_mean = 0.0;
+    int width = config_["camera_parameter"][0]["image_size"][0];   // 获取宽度
+    int height = config_["camera_parameter"][0]["image_size"][1];  // 获取高度
     json name2id_dict;
     bool first_flag = true;
     face_recognizer_->GetName2IDDict(name2id_dict);
-    cv::Mat camera2robot_extrinsic = jsonToCvMat(config_["camera_parameter"]["camera2robot_extrinsic"],4,4,2);
-    geometry_msgs::PoseStamped host_pos_msg;
+    std::vector<cv::Mat> camera2robot_extrinsics;
+    int camera_id = 0;
+    for(size_t i = 0;i<camera_nums_;i++)
+    {
+        cv::Mat camera2robot_extrinsic = jsonToCvMat(config_["camera_parameter"][i]["camera2robot_extrinsic"],4,4,2);
+        camera2robot_extrinsics.push_back(camera2robot_extrinsic);
+    }
     if(config_["debug_parameters"]["show_flag"])
     {
         cv::namedWindow("Detected Faces",cv::WINDOW_NORMAL);
@@ -76,166 +81,179 @@ void FaceDetectThread::run()
         auto time_start = std::chrono::high_resolution_clock::now();
 
         // std::cout << "Thread is running custom logic." << std::endl;
-        cv::cuda::GpuMat gpu_frame;
-        ros::Time frame_timestamp;
-        int image_ret = ros_adapter_->GetImage(gpu_frame,frame_timestamp);
-        if(image_ret != 0)
+        std::vector<Input> input_datas(camera_nums_); // 获取数据
+        for(size_t i=0;i<camera_nums_;i++)
         {
-            continue;
+            ros_adapters_[i]->GetImage(input_datas[i].gpu_frame,input_datas[i].frame_timestamp);
+            // std::cout << "input_datas[i].gpu_frame.size(): "<< input_datas[i].gpu_frame.size() << std::endl;
+            ros_adapters_[i]->GetOdom(input_datas[i].odom_pos,input_datas[i].odom_quat,input_datas[i].odom_timestamp); 
         }
-        Eigen::Vector3d odom_pos;
-        Eigen::Quaterniond odom_quat;
-        ros::Time odom_timestamp;
-        ros_adapter_->GetOdom(odom_pos,odom_quat,odom_timestamp); 
 
-        // 检测人脸并提取特征
-        FaceInfo face_infos;
-        face_recognizer_->DetectFace(gpu_frame, face_infos);
-        YoloGpu::IYolo::BoxArray body_bbox = body_detector_->Inference(gpu_frame).get();
-        int width = config_["camera_parameter"]["image_size"][0];   // 获取宽度
-        int height = config_["camera_parameter"]["image_size"][1];  // 获取高度
-        ros_interface::FaceList face_lists;
-        face_lists.header.stamp = frame_timestamp;
-        std::vector<cv::Point2f> foot_point_pixel;
-
-        host_pos_msg.header.stamp = frame_timestamp;
-
-        for (size_t i = 0; i < face_infos.face_ids.size(); ++i) 
+        // 推理
+        std::vector<std::future<int>> ret_futures(camera_nums_);
+        std::vector<std::shared_future<YoloGpu::IYolo::BoxArray>> body_bbox_futures(camera_nums_);
+        // std::vector<cv::cuda::GpuMat> gpu_frames(camera_nums_);
+        for (size_t i = 0; i < camera_nums_; i++)
         {
-            std::string host_name = GetHostName();
-            double max_confidence = 0.0;
-            if (host_name == face_infos.face_ids[i]&& face_infos.scores[i] > max_confidence) { // 置信度阈值
-                ros_interface::Face face;
-                face.name = face_infos.face_ids[i];
-                face.id = name2id_dict[face.name];
-                face.confidence = face_infos.scores[i];
-                max_confidence = face_infos.scores[i];
-                face.face_box.xmin = std::max(0, (int)face_infos.boxes[i].left);
-                face.face_box.ymin = std::max(0, (int)face_infos.boxes[i].top);
-                face.face_box.xmax = std::min(width, (int)face_infos.boxes[i].right);
-                face.face_box.ymax = std::min(height, (int)face_infos.boxes[i].bottom);
-                
-                // 提取人脸区域
-                cv::Mat face_image;
-                gpu_frame(cv::Rect(face.face_box.xmin, face.face_box.ymin,
-                                  face.face_box.xmax - face.face_box.xmin,
-                                  face.face_box.ymax - face.face_box.ymin)).download(face_image);
-                cv_bridge::CvImage img_bridge;
-                img_bridge.image = face_image;
-                img_bridge.encoding = "bgr8";
-                img_bridge.toImageMsg(face.image);
-                
-                // 计算3D坐标
-                GetFootPointPixel(face_infos.boxes[i], body_bbox,foot_point_pixel);
-                std::vector<cv::Point3f> foot_point_camera;
-                int ret = ipm_->get3DPos(foot_point_pixel, foot_point_camera);
-                //camera坐标转robot坐标
-                std::vector<cv::Point3f> foot_point_robot;
-                Camera2Robot(foot_point_camera,camera2robot_extrinsic,foot_point_robot);
-                // std::cout<<"camera2robot_extrinsic: "<<camera2robot_extrinsic;
-                //&& foot_point_robot[0].x < 5.0 && foot_point_robot[0].x > 0.0 && fabs(foot_point_robot[0].y) < 5.0
-                if (0 == ret ) // 深度大于5m的点滤掉
-                {
-                    // face.center_point_abs.x = foot_point_robot[0].x;
-                    // face.center_point_abs.y = foot_point_robot[0].y;
-                    // face.center_point_abs.z = foot_point_robot[0].z;
-                    // 目标位置在机器狗坐标系下的坐标
-                    Eigen::Vector3d target_in_robot(foot_point_robot[0].x, foot_point_robot[0].y, foot_point_robot[0].z);
-
-                    // 计算目标位置在世界坐标系下的坐标
-                    Eigen::Vector3d target_in_world = odom_quat * target_in_robot + odom_pos; 
-                    host_pos_msg.pose.position.x = target_in_world[0];
-                    host_pos_msg.pose.position.y = target_in_world[1];
-                    host_pos_msg.pose.position.z = target_in_world[2];
-
-                    face.center_point_abs.x = foot_point_robot[0].x;
-                    face.center_point_abs.y = foot_point_robot[0].y;
-                    face.center_point_abs.z = foot_point_robot[0].z;                    
-                    face_lists.face.push_back(face);
-                    if(print_flag_)
-                    {
-                        // 输出转换后的目标位置
-                        ROS_INFO("Delta time: %f", odom_timestamp.toSec() - frame_timestamp.toSec());
-                        ROS_INFO("Position: x: %f, y: %f, z: %f", odom_pos[0], odom_pos[1], odom_pos[2]);
-                        ROS_INFO("Orientation: x: %f, y: %f, z: %f, w: %f", odom_quat.x(), odom_quat.y(), odom_quat.z(), odom_quat.w());
-                        EulerAngles euler_angle = ToEulerAngles(odom_quat);
-                        ROS_INFO("Orientation: r: %f, p: %f, y: %f", euler_angle.roll, euler_angle.pitch, euler_angle.yaw);
-                        ROS_INFO("Detected face: %s, Confidence: %.2f, 3d pos(camera): (%f, %f, %f)", face.name.c_str(), face.confidence, foot_point_camera[0].x, foot_point_camera[0].y, foot_point_camera[0].z);
-                        ROS_INFO("Detected face: %s, Confidence: %.2f, 3d pos(robot): (%f, %f, %f)", face.name.c_str(), face.confidence, foot_point_robot[0].x, foot_point_robot[0].y, foot_point_robot[0].z);
-                        ROS_INFO("Detected face: %s, Confidence: %.2f, 3d pos(world): (%f, %f, %f)", face.name.c_str(), face.confidence, target_in_world[0], target_in_world[1], target_in_world[2]);
-                        std::cout<<std::endl;
-                    }
-                }
-                //实现启动后ros只发送一次原图
-                if(first_flag)
-                {
-                    first_flag = false;
-                    cv::Mat cpu_img;
-                    gpu_frame.download(cpu_img);
-                    img_bridge.image = cpu_img;
+            ret_futures[i] = face_recognizer_->DetectFaceAsync(input_datas[i].gpu_frame, input_datas[i].face_infos);
+            body_bbox_futures[i] = body_detector_->Inference(input_datas[i].gpu_frame);
+        }
+        for (size_t i = 0; i < camera_nums_; i++)
+        {
+            int ret = ret_futures[i].get();
+            input_datas[i].body_bbox = body_bbox_futures[i].get();
+        }
+        
+        //后处理
+        std::string host_name = GetHostName();
+        double max_confidence = 0.0;
+        Output output;
+        for (size_t j = 0; j < camera_nums_; j++)
+        {
+            FaceInfo &face_infos = input_datas[j].face_infos;
+            for (size_t i = 0; i < face_infos.face_ids.size(); ++i) 
+            {
+                if (host_name == face_infos.face_ids[i]&& face_infos.scores[i] > max_confidence) { // 置信度阈值
+                    output.frame_timestamp = input_datas[j].frame_timestamp;
+                    camera_id = j;
+                    ros_interface::Face face;
+                    face.name = face_infos.face_ids[i];
+                    face.id = name2id_dict[face.name];
+                    face.confidence = face_infos.scores[i];
+                    max_confidence = face_infos.scores[i];
+                    face.face_box.xmin = std::max(0, (int)face_infos.boxes[i].left);
+                    face.face_box.ymin = std::max(0, (int)face_infos.boxes[i].top);
+                    face.face_box.xmax = std::min(width, (int)face_infos.boxes[i].right);
+                    face.face_box.ymax = std::min(height, (int)face_infos.boxes[i].bottom);
+                    
+                    // 提取人脸区域
+                    cv::Mat face_image;
+                    input_datas[j].gpu_frame(cv::Rect(face.face_box.xmin, face.face_box.ymin,
+                                    face.face_box.xmax - face.face_box.xmin,
+                                    face.face_box.ymax - face.face_box.ymin)).download(face_image);
+                    cv_bridge::CvImage img_bridge;
+                    img_bridge.image = face_image;
                     img_bridge.encoding = "bgr8";
-                    sensor_msgs::CompressedImage welcome_image;
-                    img_bridge.toCompressedImageMsg(welcome_image);
-                    pub_img_.publish(welcome_image);
-                    ROS_INFO("Publish welcome image");
-                    for (size_t i = 0; i < face_infos.boxes.size(); i++)
+                    img_bridge.toImageMsg(face.image);
+                    
+                    // 计算3D坐标
+                    GetFootPointPixel(face_infos.boxes[i], input_datas[j].body_bbox,output.foot_point_pixel,output.body_bbox);
+                    if(output.foot_point_pixel.size() > 0)
                     {
-                        const auto& box = face_infos.boxes[i];
-                        cv::rectangle(cpu_img, cv::Point(box.left, box.top), cv::Point(box.right, box.bottom), cv::Scalar(0, 0, 255), 2);
-                        std::string label = "ID: " + face_infos.face_ids[i] + ", Score: " + std::to_string(face_infos.scores[i])+ ", BoxConf: " + std::to_string(face_infos.boxes[i].confidence);
-                        int baseline = 0;
-                        cv::Size label_size = cv::getTextSize(label, cv::FONT_HERSHEY_SIMPLEX, 0.5, 1, &baseline);
-                        cv::putText(cpu_img, label, cv::Point(box.left, box.top - label_size.height - 5), cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(0, 255, 0), 2);
+                        face.body_box.xmin = std::max(0, (int)output.body_bbox[0].left);
+                        face.body_box.ymin = std::max(0, (int)output.body_bbox[0].top);
+                        face.body_box.xmax = std::min(width, (int)output.body_bbox[0].right);
+                        face.body_box.ymax = std::min(height, (int)output.body_bbox[0].bottom);
                     }
-                    //保存图片
-                    std::string image_timestamp = std::to_string(ros::Time::now().toSec());
-                    std::string image_path = "outputs/welcome_image_" + image_timestamp + ".jpg";
-                    std::string folder_path = "outputs";
-                    struct stat info;
-                    if (stat(folder_path.c_str(), &info) != 0) {
-                        // 创建文件夹
-                        mkdir(folder_path.c_str(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
+                    
+                    ipms_[j]->get3DPos(output.foot_point_pixel, output.foot_point_camera);
+                    //camera坐标转robot坐标
+                    Camera2Robot(output.foot_point_camera,camera2robot_extrinsics[j],output.foot_point_robot);
+                    // std::cout<<"camera2robot_extrinsic: "<<camera2robot_extrinsic;
+                    Robot2World(output.foot_point_robot,input_datas[j].odom_pos,input_datas[j].odom_quat,output.foot_point_world);
+                    for(size_t k=0;k<output.foot_point_world.size();k++)
+                    {
+                        output.face.push_back(face);
+                        if(print_flag_)
+                        {
+                            // 输出转换后的目标位置
+                            ROS_INFO("Camera ID: %d",j);
+                            ROS_INFO("Delta time: %f", input_datas[j].odom_timestamp.toSec() - input_datas[j].frame_timestamp.toSec());
+                            ROS_INFO("Position: x: %f, y: %f, z: %f", input_datas[j].odom_pos[0], input_datas[j].odom_pos[1], input_datas[j].odom_pos[2]);
+                            ROS_INFO("Orientation: x: %f, y: %f, z: %f, w: %f", input_datas[j].odom_quat.x(), input_datas[j].odom_quat.y(), input_datas[j].odom_quat.z(), input_datas[j].odom_quat.w());
+                            EulerAngles euler_angle = ToEulerAngles(input_datas[j].odom_quat);
+                            ROS_INFO("Orientation: r: %f, p: %f, y: %f", euler_angle.roll, euler_angle.pitch, euler_angle.yaw);
+                            ROS_INFO("Detected face: %s, Confidence: %.2f, 3d pos(camera): (%f, %f, %f)", face.name.c_str(), face.confidence, output.foot_point_camera[k].x, output.foot_point_camera[k].y, output.foot_point_camera[k].z);
+                            ROS_INFO("Detected face: %s, Confidence: %.2f, 3d pos(robot): (%f, %f, %f)", face.name.c_str(), face.confidence, output.foot_point_robot[k].x, output.foot_point_robot[k].y, output.foot_point_robot[k].z);
+                            ROS_INFO("Detected face: %s, Confidence: %.2f, 3d pos(world): (%f, %f, %f)", face.name.c_str(), face.confidence, output.foot_point_world[k].x, output.foot_point_world[k].y, output.foot_point_world[k].z);
+                            std::cout<<std::endl;
+                        }                          
                     }
-                    cv::imwrite(image_path, cpu_img);
+                  
+                    //实现启动后ros只发送一次原图
+                    if(first_flag)
+                    {
+                        first_flag = false;
+                        cv::Mat cpu_img;
+                        input_datas[camera_id].gpu_frame.download(cpu_img);
+                        img_bridge.image = cpu_img;
+                        img_bridge.encoding = "bgr8";
+                        sensor_msgs::CompressedImage welcome_image;
+                        img_bridge.toCompressedImageMsg(welcome_image);
+                        pub_img_.publish(welcome_image);
+                        ROS_INFO("Publish welcome image");
+                        for (size_t i = 0; i < output.face.size(); i++)
+                        {
+                            const auto& face = output.face[i];
+                            cv::rectangle(cpu_img, cv::Point(face.face_box.xmin, face.face_box.ymin), cv::Point(face.face_box.xmax, face.face_box.ymax), cv::Scalar(0, 0, 255), 2);
+                            std::string label = "ID: " + face.name + ", Score: " + std::to_string(face.confidence);
+                            int baseline = 0;
+                            cv::Size label_size = cv::getTextSize(label, cv::FONT_HERSHEY_SIMPLEX, 0.5, 1, &baseline);
+                            cv::putText(cpu_img, label, cv::Point(face.face_box.xmin, face.face_box.ymin - label_size.height - 5), cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(0, 255, 0), 2);
+                        }
+                        for (size_t i = 0;i<output.body_bbox.size();i++)
+                        {
+                            cv::rectangle(cpu_img, cv::Point(output.body_bbox[i].left, output.body_bbox[i].top), cv::Point(output.body_bbox[i].right, output.body_bbox[i].bottom), cv::Scalar(0, 255, 0), 2);
+                        }
+                        for(size_t i = 0; i < output.foot_point_pixel.size(); i++)
+                        {
+                            cv::circle(cpu_img, cv::Point((int)output.foot_point_pixel[i].x, (int)output.foot_point_pixel[i].y), 5, cv::Scalar(0, 255, 0), -1);
+                        }
+                        //保存图片
+                        std::string image_timestamp = std::to_string(ros::Time::now().toSec());
+                        std::string image_path = "outputs/welcome_image_" + image_timestamp + ".jpg";
+                        std::string folder_path = "outputs";
+                        struct stat info;
+                        if (stat(folder_path.c_str(), &info) != 0) {
+                            // 创建文件夹
+                            mkdir(folder_path.c_str(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
+                        }
+                        cv::imwrite(image_path, cpu_img);
+                    }                
                 }
-
-                
             }
-        }
-        // // 输出检测结果
-        // std::cout << "Detected " << face_info.face_ids.size() << " faces." << std::endl;
-        // for (size_t i = 0; i < face_info.face_ids.size(); i++)
-        // {
-        //     std::cout << "Face " << i << ": ID = " << face_info.face_ids[i] << ", Score = " << face_info.scores[i] << std::endl;
-        // }
-        if(config_["debug_parameters"]["show_flag"])
+        }               
+        
+        if(config_["debug_parameters"]["show_flag"] && !input_datas[camera_id].gpu_frame.empty())
         {
             // 在图像上绘制人脸边界框并显示人脸 ID 和分数
             cv::Mat cpu_img;
-            gpu_frame.download(cpu_img);
-            for (size_t i = 0; i < face_infos.boxes.size(); i++)
+            input_datas[camera_id].gpu_frame.download(cpu_img);
+            for (size_t i = 0; i < output.face.size(); i++)
             {
-                const auto& box = face_infos.boxes[i];
-                cv::rectangle(cpu_img, cv::Point(box.left, box.top), cv::Point(box.right, box.bottom), cv::Scalar(0, 0, 255), 2);
-                std::string label = "ID: " + face_infos.face_ids[i] + ", Score: " + std::to_string(face_infos.scores[i])+ ", BoxConf: " + std::to_string(face_infos.boxes[i].confidence);
+                const auto& face = output.face[i];
+                cv::rectangle(cpu_img, cv::Point(face.face_box.xmin, face.face_box.ymin), cv::Point(face.face_box.xmax, face.face_box.ymax), cv::Scalar(0, 0, 255), 2);
+                std::string label = "ID: " + face.name + ", Score: " + std::to_string(face.confidence);
                 int baseline = 0;
                 cv::Size label_size = cv::getTextSize(label, cv::FONT_HERSHEY_SIMPLEX, 0.5, 1, &baseline);
-                cv::putText(cpu_img, label, cv::Point(box.left, box.top - label_size.height - 5), cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(0, 255, 0), 2);
+                cv::putText(cpu_img, label, cv::Point(face.face_box.xmin, face.face_box.ymin - label_size.height - 5), cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(0, 255, 0), 2);
             }
-            for (size_t i = 0; i < body_bbox.size(); i++)
+            for (size_t i = 0;i<output.body_bbox.size();i++)
             {
-                const auto& box = body_bbox[i];
-                cv::rectangle(cpu_img, cv::Point(box.left, box.top), cv::Point(box.right, box.bottom), cv::Scalar(0, 0, 255), 2);
+                cv::rectangle(cpu_img, cv::Point(output.body_bbox[i].left, output.body_bbox[i].top), cv::Point(output.body_bbox[i].right, output.body_bbox[i].bottom), cv::Scalar(0, 255, 0), 2);
             }
-            for(size_t i = 0; i < foot_point_pixel.size(); i++)
+            for(size_t i = 0; i < output.foot_point_pixel.size(); i++)
             {
-                cv::circle(cpu_img, cv::Point((int)foot_point_pixel[i].x, (int)foot_point_pixel[i].y), 5, cv::Scalar(0, 255, 0), -1);
+                cv::circle(cpu_img, cv::Point((int)output.foot_point_pixel[i].x, (int)output.foot_point_pixel[i].y), 5, cv::Scalar(0, 255, 0), -1);
             }
             // 显示图像
             cv::imshow("Detected Faces", cpu_img);
             cv::waitKey(40);
-            // cv::imwrite("/home/jetson/workspace/faceID_jzb/data/backup/frame_1733835120220579455_result.png", cpu_img);
         }
+        
+        // 打包和发布结果
+        ros_interface::FaceList face_lists;
+        geometry_msgs::PoseStamped host_pos_msg;
+        face_lists.header.stamp = output.frame_timestamp;
+        host_pos_msg.header.stamp = output.frame_timestamp;
+        for(size_t i = 0;i < output.face.size();i++)
+        {
+            host_pos_msg.pose.position.x = output.foot_point_world[i].x;
+            host_pos_msg.pose.position.y = output.foot_point_world[i].y;
+            host_pos_msg.pose.position.z = output.foot_point_world[i].z;                    
+            face_lists.face.push_back(output.face[i]);
+        }
+
         pub_.publish(face_lists);
         pub_pos_world_.publish(host_pos_msg);
         
@@ -260,7 +278,12 @@ int FaceDetectThread::Init(nlohmann::json config)
     config_ = config;
     #ifdef ROS_ENABLE 
         ros::NodeHandle nh; 
-        ros_adapter_ = std::make_unique<Ros1Adapter>(); 
+        ros_adapters_.resize(camera_nums_);
+        for(size_t i=0;i<camera_nums_;i++)
+        {
+            ros_adapters_[i] = std::make_unique<Ros1Adapter>(); 
+            ros_adapters_[i]->Init("faceID", config["camera_parameter"][i]["fisheye_rostopic"], 1);
+        }
         pub_ = nh.advertise<ros_interface::FaceList>("/perception/result/FaceList", 1);
         pub_img_ = nh.advertise<sensor_msgs::CompressedImage>("/cam_front/csi_cam/welcome_image", 1);
         pub_pos_world_ = nh.advertise<geometry_msgs::PoseStamped>("/perception/result/HostPosWorld", 1);
@@ -271,12 +294,11 @@ int FaceDetectThread::Init(nlohmann::json config)
         ros_adapter_ = std::make_unique<Ros2Adapter>();  
     #endif
     
-    if (!ros_adapter_) 
+    if (0 == ros_adapters_.size()) 
     {  
         std::cerr << "No ROS version enabled. Define either ROS_ENABLE or ROS2_ENABLE." << std::endl;  
-        return 1;  
+        return -1;  
     } 
-    ros_adapter_->Init("faceID", config["camera_parameter"]["fisheye_rostopic"], 1);
     face_recognizer_ = std::make_shared<FaceRecognizer>();
     face_recognizer_->Init(config);
     body_detector_ = YoloGpu::IYoloManager::create();
@@ -286,15 +308,19 @@ int FaceDetectThread::Init(nlohmann::json config)
                         config["model_parameter"]["body_detector"]["nms_threshold"]
                         );
     //IPM
-    cv::Mat cameraMatrix = jsonToCvMat(config["camera_parameter"]["camera_intrinsics"], 3, 3, 2);
-    cv::Mat distCoeffs = jsonToCvMat(config["camera_parameter"]["camera_distortion"], 1, 4, 1);
-    cv::Mat perspectiveMatrix = jsonToCvMat(config["3d_calibration_parameter"]["PERPECTIVE_MATRIX"], 3, 3, 2);
-    std::vector<cv::Point2f> calibratePointsPixel = jsonToPoints2f(config["3d_calibration_parameter"]["CALIBRATE_POINTS_PIXEL"]);
-    std::vector<cv::Point3f> calibratePointsCamera = jsonToPoints3f(config["3d_calibration_parameter"]["CALIBRATE_POINTS_CAMERA"]); 
-    int image_width = config["camera_parameter"]["image_size"][0];
-    int image_height = config["camera_parameter"]["image_size"][1];
-    IPM ipm(calibratePointsPixel, calibratePointsCamera, perspectiveMatrix, cameraMatrix, distCoeffs,image_width, image_height);
-    ipm_ = std::make_shared<IPM>(ipm);
+    ipms_.resize(camera_nums_);
+    for(size_t i =0;i<camera_nums_;i++)
+    {
+        cv::Mat cameraMatrix = jsonToCvMat(config["camera_parameter"][i]["camera_intrinsics"], 3, 3, 2);
+        cv::Mat distCoeffs = jsonToCvMat(config["camera_parameter"][i]["camera_distortion"], 1, 4, 1);
+        cv::Mat perspectiveMatrix = jsonToCvMat(config["camera_parameter"][i]["3d_calibration_parameter"]["PERPECTIVE_MATRIX"], 3, 3, 2);
+        std::vector<cv::Point2f> calibratePointsPixel = jsonToPoints2f(config["camera_parameter"][i]["3d_calibration_parameter"]["CALIBRATE_POINTS_PIXEL"]);
+        std::vector<cv::Point3f> calibratePointsCamera = jsonToPoints3f(config["camera_parameter"][i]["3d_calibration_parameter"]["CALIBRATE_POINTS_CAMERA"]); 
+        int image_width = config["camera_parameter"][i]["image_size"][0];
+        int image_height = config["camera_parameter"][i]["image_size"][1];        
+        IPM ipm(calibratePointsPixel, calibratePointsCamera, perspectiveMatrix, cameraMatrix, distCoeffs,image_width, image_height);
+        ipms_[i] = std::make_shared<IPM>(ipm);
+    }
     SetHostName(config["debug_parameters"]["host_name"]);
     return 0;
 }
@@ -326,12 +352,13 @@ int FaceDetectThread::FlipPrintFlag()
 }
 void FaceDetectThread::GetFootPointPixel(const ScrfdGpu::IScrfd::Box& target_face_box,
                                         const YoloGpu::IYolo::BoxArray& body_boxes,
-                                        std::vector<cv::Point2f>& foot_point_pixels)
+                                        std::vector<cv::Point2f>& foot_point_pixels,YoloGpu::IYolo::BoxArray& target_body_boxes)
 {
     foot_point_pixels.clear();
+    target_body_boxes.clear();
     for(size_t i=0;i<body_boxes.size();i++)
     {
-        if(body_boxes[i].keypoints[0].confidence>0.5 &&
+        if(body_boxes[i].keypoints[0].confidence>0.5 && 
            body_boxes[i].keypoints[0].point.x>=target_face_box.left &&
            body_boxes[i].keypoints[0].point.x<=target_face_box.right &&
            body_boxes[i].keypoints[0].point.y>=target_face_box.top &&
@@ -341,6 +368,7 @@ void FaceDetectThread::GetFootPointPixel(const ScrfdGpu::IScrfd::Box& target_fac
             foot_point_pixel.x = (body_boxes[i].left + body_boxes[i].right)/2;
             foot_point_pixel.y = body_boxes[i].bottom;
             foot_point_pixels.push_back(foot_point_pixel);
+            target_body_boxes.push_back(body_boxes[i]);
         }
     }
 }
@@ -363,6 +391,18 @@ void FaceDetectThread::Camera2Robot(const std::vector<cv::Point3f>&foot_point_ca
                                       point_robot.at<double>(2, 0));
     }
 }
+
+void FaceDetectThread::Robot2World(const std::vector<cv::Point3f>& foot_point_robot,const Eigen::Vector3d& robot_pos,const Eigen::Quaterniond& robot_quat,std::vector<cv::Point3f>& foot_point_world)
+{
+    foot_point_world.clear();
+    for(size_t i=0;i<foot_point_robot.size();i++)
+    {
+        Eigen::Vector3d foot_point_robot_eigen(foot_point_robot[i].x,foot_point_robot[i].y,foot_point_robot[i].z);
+        Eigen::Vector3d foot_point_world_eigen = robot_quat*foot_point_robot_eigen + robot_pos;
+        foot_point_world.emplace_back(cv::Point3f(foot_point_world_eigen.x(),foot_point_world_eigen.y(),foot_point_world_eigen.z()));
+    }
+}
+
 
 int FaceDetectThread::GetNameList(std::vector<std::string>& name_list)
 {

@@ -34,7 +34,9 @@ def main():
     fisheye_image_path = os.path.join(output_dir, 'Fisheye')
     if not os.path.exists(fisheye_image_path):
         os.makedirs(fisheye_image_path)
-    # 打开 rosbag 文件
+    back_fisheye_image_path = os.path.join(output_dir, 'BackFisheye')
+    if not os.path.exists(back_fisheye_image_path):
+        os.makedirs(back_fisheye_image_path)    # 打开 rosbag 文件
     bag = rosbag.Bag(args.input_file, 'r')
 
  # 获取 bag 的时间范围
@@ -48,8 +50,9 @@ def main():
     image_topic = '/camera/color/image_raw/compressed'
     depth_image_topic = '/camera/depth/image_raw'
     fisheye_image_topic = '/cam_front_fish/csi_cam/image_raw/compressed'
+    back_fisheye_image_topic = '/cam_back_fish/csi_cam/image_raw/compressed'
     # 解析 rosbag 文件中的图像信息
-    for topic, msg, t in bag.read_messages(topics=[image_topic, depth_image_topic,fisheye_image_topic]):
+    for topic, msg, t in bag.read_messages(topics=[image_topic, depth_image_topic,fisheye_image_topic,back_fisheye_image_topic]):
         if t.to_sec() >= last_50s_start_time:
             if topic[-1] == '/':
                 topic = topic[:-1]
@@ -63,7 +66,11 @@ def main():
                 elif topic == fisheye_image_topic:
                     # 解码 CompressedImage 数据
                     np_arr = np.frombuffer(msg.data, np.uint8)
-                    cv_fisheye_image = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)                
+                    cv_fisheye_image = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)   
+                elif topic == back_fisheye_image_topic:
+                    # 解码 CompressedImage 数据
+                    np_arr = np.frombuffer(msg.data, np.uint8)
+                    cv_back_fisheye_image = cv2.imdecode(np_arr, cv2.IMREAD_COLOR) 
             except Exception as e:
                 print(f"Error converting image: {e}")
                 continue
@@ -73,7 +80,7 @@ def main():
             image_filename = os.path.join(color_image_path, f"frame_{timestamp}.png")
             depth_image_filename = os.path.join(depth_image_path, f"frame_{timestamp}.png")
             fisheye_image_filename = os.path.join(fisheye_image_path, f"frame_{timestamp}.png")
-
+            back_fisheye_image_filename = os.path.join(back_fisheye_image_path, f"frame_{timestamp}.png")
             # 保存图像文件
             if topic == image_topic:
                 cv2.imwrite(image_filename, cv_image)
@@ -84,7 +91,9 @@ def main():
             elif topic == fisheye_image_topic:
                 cv2.imwrite(fisheye_image_filename, cv_fisheye_image)
                 print(f"Saved image: {fisheye_image_filename}")
-    # 关闭 bag 文件
+            elif topic == back_fisheye_image_topic:
+                cv2.imwrite(back_fisheye_image_filename, cv_back_fisheye_image)
+                print(f"Saved image: {back_fisheye_image_filename}")    # 关闭 bag 文件
     bag.close()
 
 

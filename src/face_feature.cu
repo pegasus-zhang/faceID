@@ -2001,6 +2001,10 @@ namespace GeelyRobotVisionGpu
 
         virtual bool preprocess(Job& job, const cv::cuda::GpuMat& image) override{
             // auto begin_timer = timestamp_now_float();
+            if(image.empty())
+            {
+                return false;
+            }
             if(tensor_allocator_ == nullptr){
                 INFOE("tensor_allocator_ is nullptr");
                 return false;

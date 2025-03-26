@@ -165,6 +165,8 @@ if __name__ == '__main__':
                         help='save calibration result')
     parser.add_argument('--config', type=str, default= "../config/default.json",
                         help='config file path')
+    parser.add_argument('--camera_id', type=int, default= 0,
+                    help='calibration camera id,front camera is 0,back camera is 1')
     opt = parser.parse_args()
     
     # 观察图像像素大小，便于手动选点
@@ -173,10 +175,10 @@ if __name__ == '__main__':
     # cv2.imshow('img',img)
     with open(opt.config, 'r') as json_file:
         config = json.load(json_file)
-        K = np.array(config["camera_parameter"]['camera_intrinsics'])
-        D = np.array(config["camera_parameter"]['camera_distortion'])
-        width = config["camera_parameter"]['image_size'][0]
-        height = config["camera_parameter"]['image_size'][1]
+        K = np.array(config["camera_parameter"][opt.camera_id]['camera_intrinsics'])
+        D = np.array(config["camera_parameter"][opt.camera_id]['camera_distortion'])
+        width = config["camera_parameter"][opt.camera_id]['image_size'][0]
+        height = config["camera_parameter"][opt.camera_id]['image_size'][1]
         
         undistort_image = ImageUndistort(K,D,width,height)
         img_undistort = undistort_image.undistort_fisheye_image(img)
@@ -196,7 +198,7 @@ if __name__ == '__main__':
                 if key == ord('q'):  # 按下 'q' 键退出
                     break
             calibrate_points_img = get_four_points(calibrate_points_img)
-            calibrate_points_camera = np.array(config["3d_calibration_parameter"]["CALIBRATE_POINTS_CAMERA"])
+            calibrate_points_camera = np.array(config["camera_parameter"][opt.camera_id]["3d_calibration_parameter"]["CALIBRATE_POINTS_CAMERA"])
             resolution = 0.005
             test01_img = draw_line(img_undistort, calibrate_points_img)
             cv2.namedWindow('test01',cv2.WINDOW_NORMAL)
@@ -213,17 +215,10 @@ if __name__ == '__main__':
             print("PERPECTIVE_MATRIX: ",M)
             print("TARGET_SIZE: ",target_size)
             # # 创建一个字典来存储变量
-            # config = {
-            #     "CALIBRATE_POINTS_PIXEL": points_transformed.tolist(),
-            #     "CALIBRATE_POINTS_CAMERA": calibrate_points_camera.tolist(),
-            #     "PERPECTIVE_MATRIX": M.tolist(),
-            #     "TARGET_SIZE": target_size
-            # }
-
-            config["3d_calibration_parameter"]["CALIBRATE_POINTS_PIXEL"] = points_transformed.tolist()
-            config["3d_calibration_parameter"]["CALIBRATE_POINTS_CAMERA"] = calibrate_points_camera.tolist()
-            config["3d_calibration_parameter"]["PERPECTIVE_MATRIX"] = M.tolist()
-            config["3d_calibration_parameter"]["TARGET_SIZE"] = target_size
+            config["camera_parameter"][opt.camera_id]["3d_calibration_parameter"]["CALIBRATE_POINTS_PIXEL"] = points_transformed.tolist()
+            config["camera_parameter"][opt.camera_id]["3d_calibration_parameter"]["CALIBRATE_POINTS_CAMERA"] = calibrate_points_camera.tolist()
+            config["camera_parameter"][opt.camera_id]["3d_calibration_parameter"]["PERPECTIVE_MATRIX"] = M.tolist()
+            config["camera_parameter"][opt.camera_id]["3d_calibration_parameter"]["TARGET_SIZE"] = target_size
 
             # 将字典保存到 JSON 文件中
             if opt.save:
@@ -242,14 +237,14 @@ if __name__ == '__main__':
             # cv2.waitKey(0)
             print("start test")
             # 获取 JSON 数组
-            CALIBRATE_POINTS_PIXEL = np.array(config["3d_calibration_parameter"]["CALIBRATE_POINTS_PIXEL"])
-            CALIBRATE_POINTS_CAMERA = np.array(config["3d_calibration_parameter"]["CALIBRATE_POINTS_CAMERA"])
-            PERPECTIVE_MATRIX = np.array(config["3d_calibration_parameter"]["PERPECTIVE_MATRIX"])
-            TARGET_SIZE = np.array(config["3d_calibration_parameter"]["TARGET_SIZE"])
-            K = np.array(config["camera_parameter"]['camera_intrinsics'])
-            D = np.array(config["camera_parameter"]['camera_distortion'])
-            width = config["camera_parameter"]['image_size'][0]
-            height = config["camera_parameter"]['image_size'][1]
+            CALIBRATE_POINTS_PIXEL = np.array(config["camera_parameter"][opt.camera_id]["3d_calibration_parameter"]["CALIBRATE_POINTS_PIXEL"])
+            CALIBRATE_POINTS_CAMERA = np.array(config["camera_parameter"][opt.camera_id]["3d_calibration_parameter"]["CALIBRATE_POINTS_CAMERA"])
+            PERPECTIVE_MATRIX = np.array(config["camera_parameter"][opt.camera_id]["3d_calibration_parameter"]["PERPECTIVE_MATRIX"])
+            TARGET_SIZE = np.array(config["camera_parameter"][opt.camera_id]["3d_calibration_parameter"]["TARGET_SIZE"])
+            K = np.array(config["camera_parameter"][opt.camera_id]['camera_intrinsics'])
+            D = np.array(config["camera_parameter"][opt.camera_id]['camera_distortion'])
+            width = config["camera_parameter"][opt.camera_id]['image_size'][0]
+            height = config["camera_parameter"][opt.camera_id]['image_size'][1]
             target_point_img = []
             # 绑定鼠标回调函数
             cv2.setMouseCallback('img', click_event, (target_point_img, img,"img"))

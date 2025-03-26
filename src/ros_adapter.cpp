@@ -30,8 +30,8 @@ Ros1Adapter::Ros1Adapter()
 // void Ros1Adapter::subscribe(const std::string& topic_name, size_t queue_size) {
 //     sub_ = nh_->subscribe<CompressedImage>(
 //         topic_name, queue_size, [this](const boost::shared_ptr<const CompressedImage>& msg) {
-//             fifo_queue_.push(msg);
-//             // ROS_INFO("Image received and pushed to queue.");
+//             ROS_INFO("Image received and pushed to queue.");
+//             ROS_INFO("Received image message,time: %f",msg->header.stamp.toSec());
 //         });
 // }
 
@@ -41,6 +41,7 @@ void Ros1Adapter::SensorSyncCallback(const nav_msgs::OdometryConstPtr& odom, con
     // ROS_INFO("Received odometry message,time: %f",odom->header.stamp.toSec());
     // ROS_INFO("Position: x: %f, y: %f, z: %f", odom->pose.pose.position.x, odom->pose.pose.position.y, odom->pose.pose.position.z);
     // ROS_INFO("Orientation: x: %f, y: %f, z: %f, w: %f", odom->pose.pose.orientation.x, odom->pose.pose.orientation.y, odom->pose.pose.orientation.z, odom->pose.pose.orientation.w);
+    // ROS_INFO("Received image message,time: %f",image->header.stamp.toSec());
     msg_mutex_.lock();
     odom_msg_ = odom;
     image_msg_ = image;
@@ -61,11 +62,9 @@ int Ros1Adapter::Init(std::string node_name, std::string topic_name,int queue_si
     nh_ = boost::make_shared<ros::NodeHandle>();
     odom_sub_.subscribe(*nh_, "/map/global_odom", 10);
     image_sub_.subscribe(*nh_, topic_name, queue_size);
-    sync_.reset(new message_filters::Synchronizer<MySyncPolicy>(MySyncPolicy(10), odom_sub_, image_sub_));
+    sync_.reset(new message_filters::Synchronizer<MySyncPolicy>(MySyncPolicy(20), odom_sub_, image_sub_));
     sync_->setMaxIntervalDuration(ros::Duration(0.3));
     sync_->registerCallback(boost::bind(&Ros1Adapter::SensorSyncCallback, this, _1, _2));
-
-    // subscribe(topic_name,queue_size);
     return 0;
 }
 int Ros1Adapter::GetImage(cv::cuda::GpuMat& img,ros::Time& timestamp)
@@ -77,6 +76,7 @@ int Ros1Adapter::GetImage(cv::cuda::GpuMat& img,ros::Time& timestamp)
     msg_mutex_.unlock();
     if(image_msg == nullptr)
     {
+        std::cout<<"image_msg is null"<<std::endl;
         return -1;
     }
     // ROS_INFO("Processing image from queue...");  

@@ -24,6 +24,7 @@ public:
     int ExtractFeature(const std::vector<cv::cuda::GpuMat>& aligned_faces, cv::cuda::GpuMat& features);
     int DetectExtractFeature(const cv::cuda::GpuMat& img,FaceInfo& face_info);
     int DetectFace(const cv::cuda::GpuMat& img,FaceInfo& face_info);
+    std::future<int> DetectFaceAsync(const cv::cuda::GpuMat& img,FaceInfo& face_info);
     int SetName2IDDict(const nlohmann::json& name2id_dic);
     int GetName2IDDict(nlohmann::json& name2id_dic);
     int GetNameList(std::vector<std::string>& name_list);
