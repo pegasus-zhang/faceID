@@ -153,6 +153,9 @@ void FaceDetectThread::run()
                     Robot2World(output.foot_point_robot,input_datas[j].odom_pos,input_datas[j].odom_quat,output.foot_point_world);
                     for(size_t k=0;k<output.foot_point_world.size();k++)
                     {
+                        face.center_point_abs.x = output.foot_point_robot[k].x;
+                        face.center_point_abs.y = output.foot_point_robot[k].y;
+                        face.center_point_abs.z = output.foot_point_robot[k].z;
                         output.face.push_back(face);
                         if(print_flag_)
                         {
