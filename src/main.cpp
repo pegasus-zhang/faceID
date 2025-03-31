@@ -13,10 +13,12 @@ int main(int argc, char** argv) {
     cmdline::parser cmd_parser;
     cmd_parser.add<std::string>("config_path",'c',"config path",false,"config/default.json");
     cmd_parser.add("show",'\0',"show result flag");
+    cmd_parser.add("print_log",'\0',"print log flag");
     cmd_parser.add("suspend",'\0',"suspend thread flag");
     cmd_parser.add<std::string>("host_name",'\0',"host name",false,"Zhangzhaokang");
     cmd_parser.parse_check(argc,argv);
     bool show_flag = cmd_parser.exist("show");
+    bool print_log = cmd_parser.exist("print_log");
     std::string config_path = cmd_parser.get<std::string>("config_path");
     std::string host_name = cmd_parser.get<std::string>("host_name");
     // 初始化ROS节点
@@ -34,6 +36,7 @@ int main(int argc, char** argv) {
     config["debug_parameters"]["suspend"] = suspend_flag;
 	config["debug_parameters"]["host_name"] = host_name;
     config["debug_parameters"]["show_flag"] = show_flag;
+    config["debug_parameters"]["print_log"] = print_log;
     ros::NodeHandle nh;
     CmdListener cmd_listener;
     cmd_listener.Init(nh, config);

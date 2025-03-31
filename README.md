@@ -23,8 +23,8 @@ Orin NX, 森云鱼眼相机
 
 2. 软件环境
 * Jetson5.1.2 。Orin上默认安装
-* Ros1-noetic 。可参考鱼香ROS安装教程
-* tensorrt==8.5.2。 默认安装。
+* Ros1-noetic 。可参考[鱼香ROS一键安装教程](https://fishros.org.cn/forum/topic/20/%E5%B0%8F%E9%B1%BC%E7%9A%84%E4%B8%80%E9%94%AE%E5%AE%89%E8%A3%85%E7%B3%BB%E5%88%97?lang=en-US)
+* tensorrt==8.5.2。 Orin上默认安装。
 * Opencv+cuda==4.5.5。 可参照opencv官方教程安装。
 
 
@@ -38,8 +38,22 @@ Orin NX, 森云鱼眼相机
     cd ros1_interface && catkin_make
     source ros1_interface/devel/setup.bash
     ```
-* 运行程序 。  
-``` ./run.sh```
+
+* 离线数据测试  
+    离线数据存放在NAS上，路径为```$NAS/端侧感知/人脸ID/data```，其中```$NAS```为NAS的地址，需要根据实际情况修改。离线数据以roabag包格式存储，可以任意找到一个数据包进行播放。   
+    * 新建一个终端，运行roscore。```roscore```
+    * 新建一个终端，运行rosbag播放。```rosbag play -l 2025-03-26-15-14-07_back_2m.bag```
+    * 新建一个终端，运行程序。``` ./run_test.sh```。 可视化结果如下图所示   
+    ![image](./doc/离线测试结果可视化.png)   
+    终端打印运行结果如下图所示   
+    ![image](./doc/离线测试终端结果展示.png)
+       
+        
+* 真机测试
+    * 运行鱼眼相机SDK
+    * 运行程序   
+    ``` ./run.sh```
+
 
 4. 参数配置   
 config文件架下存放了目前所有机器狗的配置文件，其中默认配置文件为default.json文件。可以根据不同的机器狗平台进行配置文件的修改。下面将介绍配置文件中各个参数的含义。其中加粗的是可以根据实际情况进行修改的，没有加粗的一般不用修改。   

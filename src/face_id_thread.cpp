@@ -68,6 +68,10 @@ void FaceDetectThread::run()
     {
         cv::namedWindow("Detected Faces",cv::WINDOW_NORMAL);
     }
+    if(config_["debug_parameters"]["print_log"])
+    {
+        print_flag_ = true;
+    }
     while (!is_stopped() && ros::ok()) {
         // 处理挂起逻辑
         std::unique_lock<std::mutex> lock(cv_mtx_);
