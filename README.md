@@ -22,10 +22,10 @@ face id 模块主要功能是获取主人落脚点在机器狗坐标系下的3D�
 Orin NX, 森云鱼眼相机
 
 2. 软件环境
-* Jetson5.1.2 。Orin上默认安装
+* JetPack==5.1.2 。Orin上默认安装
 * Ros1-noetic 。可参考[鱼香ROS一键安装教程](https://fishros.org.cn/forum/topic/20/%E5%B0%8F%E9%B1%BC%E7%9A%84%E4%B8%80%E9%94%AE%E5%AE%89%E8%A3%85%E7%B3%BB%E5%88%97?lang=en-US)
 * tensorrt==8.5.2。 Orin上默认安装。
-* Opencv+cuda==4.5.5。 可参照opencv官方教程安装。
+* Opencv+cuda==4.5.5。 可参照opencv官方教程或者[博客](https://blog.csdn.net/m0_64293675/article/details/142127890)安装。
 
 
 3. 运行方法 
