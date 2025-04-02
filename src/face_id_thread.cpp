@@ -99,12 +99,13 @@ void FaceDetectThread::run()
         // std::vector<cv::cuda::GpuMat> gpu_frames(camera_nums_);
         for (size_t i = 0; i < camera_nums_; i++)
         {
-            ret_futures[i] = face_recognizer_->DetectFaceAsync(input_datas[i].gpu_frame, input_datas[i].face_infos);
+            // ret_futures[i] = face_recognizer_->DetectFaceAsync(input_datas[i].gpu_frame, input_datas[i].face_infos);
             body_bbox_futures[i] = body_detector_->Inference(input_datas[i].gpu_frame);
+            int ret = face_recognizer_->DetectFace(input_datas[i].gpu_frame, input_datas[i].face_infos);
         }
         for (size_t i = 0; i < camera_nums_; i++)
         {
-            int ret = ret_futures[i].get();
+            // int ret = ret_futures[i].get();
             input_datas[i].body_bbox = body_bbox_futures[i].get();
         }
         
@@ -157,10 +158,14 @@ void FaceDetectThread::run()
                     Robot2World(output.foot_point_robot,input_datas[j].odom_pos,input_datas[j].odom_quat,output.foot_point_world);
                     for(size_t k=0;k<output.foot_point_world.size();k++)
                     {
-                        face.center_point_abs.x = output.foot_point_robot[k].x;
-                        face.center_point_abs.y = output.foot_point_robot[k].y;
-                        face.center_point_abs.z = output.foot_point_robot[k].z;
-                        output.face.push_back(face);
+                        //超值保护
+                        if(output.foot_point_robot[k].x < 5.0 && output.foot_point_robot[k].x > -5.0 && output.foot_point_robot[k].y < 5.0 && output.foot_point_robot[k].y > -5.0 )
+                        {
+                            face.center_point_abs.x = output.foot_point_robot[k].x;
+                            face.center_point_abs.y = output.foot_point_robot[k].y;
+                            face.center_point_abs.z = output.foot_point_robot[k].z;
+                            output.face.push_back(face);
+                        }
                         if(print_flag_)
                         {
                             // 输出转换后的目标位置

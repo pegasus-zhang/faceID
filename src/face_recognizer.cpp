@@ -101,8 +101,7 @@ int FaceRecognizer::DetectExtractFeature(const cv::cuda::GpuMat& img, FaceInfo& 
     face_info.boxes = boxes;
     std::vector<cv::cuda::GpuMat> aligned_faces;
     CropFacesAlignment(img, boxes, aligned_faces);
-    ExtractFeature(aligned_faces, face_info.features);
-    return 0; // 返回0表示成功
+    return ExtractFeature(aligned_faces, face_info.features); // 返回0表示成功
 }
 
 int FaceRecognizer::DetectFace(const cv::cuda::GpuMat& img, FaceInfo& face_info)

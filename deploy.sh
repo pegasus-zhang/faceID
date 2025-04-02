@@ -36,5 +36,5 @@ else
     echo "不是首次更新,只执行同步操作..."
     cp -r lib faceID_deploy/
     cp workspace/face_id_app faceID_deploy/workspace/
-    rsync -avz --progress faceID_deploy/lib faceID_deploy/workspace/ $USER@$IP:/home/$USER/02_projects/faceID/
+    rsync -avz --progress faceID_deploy/lib faceID_deploy/workspace $USER@$IP:/home/$USER/02_projects/faceID/
 fi
