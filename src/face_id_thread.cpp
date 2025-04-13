@@ -288,6 +288,7 @@ void FaceDetectThread::run()
 int FaceDetectThread::Init(nlohmann::json config)
 {
     config_ = config;
+    camera_nums_ = config["camera_parameter"].size(); 
     #ifdef ROS_ENABLE 
         ros::NodeHandle nh; 
         ros_adapters_.resize(camera_nums_);
@@ -319,6 +320,7 @@ int FaceDetectThread::Init(nlohmann::json config)
                         config["model_parameter"]["body_detector"]["confidence_threshold"],
                         config["model_parameter"]["body_detector"]["nms_threshold"]
                         );
+                       
     //IPM
     ipms_.resize(camera_nums_);
     for(size_t i =0;i<camera_nums_;i++)
@@ -334,6 +336,7 @@ int FaceDetectThread::Init(nlohmann::json config)
         ipms_[i] = std::make_shared<IPM>(ipm);
     }
     SetHostName(config["debug_parameters"]["host_name"]);
+    
     return 0;
 }
 void FaceDetectThread::Spin()

@@ -36,7 +36,7 @@ class FaceDetectThread: public MyThread
 {
 private:
     /* data */
-    const int camera_nums_ = 2;
+    int camera_nums_ = 2;
     std::unique_ptr<RosAdapter> ros_adapter_ = nullptr;
     std::vector<std::unique_ptr<RosAdapter>> ros_adapters_;
     std::shared_ptr<FaceRecognizer> face_recognizer_ = nullptr;
