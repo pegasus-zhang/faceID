@@ -53,7 +53,8 @@
             "request": "launch",
             "program": "${workspaceFolder}/workspace/face_id_app",
             "args": [
-                "--host_name=Zhangzhaokang",
+                "--host_name=Meijianhui",
+                "--print_log",
                 "--show"
             ],
             "stopAtEntry": false,
