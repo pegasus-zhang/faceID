@@ -6,7 +6,6 @@
 #include <fstream>
 #include <cv_bridge/cv_bridge.h>
 #include <sys/stat.h>
-#include "median_filter.h"
 
 typedef nlohmann::json json;
 FaceDetectThread::FaceDetectThread(/* args */)
