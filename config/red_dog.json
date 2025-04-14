@@ -1,0 +1,144 @@
+{
+    "database_path": "data/known_people/database-resnet50.json",
+    "name2id_path": "data/known_people/name2id.json",
+    "camera_parameter": [
+        {
+            "fisheye_rostopic": "/cam_front_fish/csi_cam/image_raw/compressed",
+            "camera_intrinsics": [
+                [
+                    511.3623953605,
+                    0.0,
+                    945.0244978431
+                ],
+                [
+                    0,
+                    511.4026186026,
+                    775.5020771799
+                ],
+                [
+                    0,
+                    0,
+                    1
+                ]
+            ],
+            "camera_distortion": [
+                0.1347717201,
+                -0.0338054641,
+                -0.0023963342,
+                0.0011715332
+            ],
+            "camera2robot_extrinsic": [
+                [
+                    0.0,
+                    0.0,
+                    1.0,
+                    0.0
+                ],
+                [
+                    -1.0,
+                    0.0,
+                    0.0,
+                    0.0
+                ],
+                [
+                    0.0,
+                    -1.0,
+                    0.0,
+                    0.0
+                ],
+                [
+                    0,
+                    0,
+                    0,
+                    1
+                ]
+            ],
+            "image_size": [
+                1920,
+                1536
+            ],
+            "3d_calibration_parameter": {
+                "CALIBRATE_POINTS_PIXEL": [
+                    [
+                        600,
+                        800
+                    ],
+                    [
+                        1200,
+                        800
+                    ],
+                    [
+                        600,
+                        1600
+                    ],
+                    [
+                        1200,
+                        1600
+                    ]
+                ],
+                "CALIBRATE_POINTS_CAMERA": [
+                    [
+                        -1.5,
+                        0.0,
+                        4.7
+                    ],
+                    [
+                        1.5,
+                        0.0,
+                        4.7
+                    ],
+                    [
+                        -1.5,
+                        0.0,
+                        0.7
+                    ],
+                    [
+                        1.5,
+                        0.0,
+                        0.7
+                    ]
+                ],
+                "PERPECTIVE_MATRIX": [
+                    [
+                        -0.046672377837426754,
+                        -1.1920773013932773,
+                        990.97321984711
+                    ],
+                    [
+                        0.07528213559520378,
+                        -2.2897880768316146,
+                        1765.0455644508495
+                    ],
+                    [
+                        4.4065048971208666e-05,
+                        -0.0013110688598328472,
+                        1.0
+                    ]
+                ],
+                "TARGET_SIZE": [
+                    1800,
+                    1600
+                ]
+            }
+        }
+    ],
+    "model_parameter": {
+        "face_detector": {
+            "model_path": "weights/det_10g.onnx",
+            "confidence_threshold": 0.6,
+            "nms_threshold": 0.5,
+            "build_engine": false
+        },
+        "body_detector": {
+            "model_path": "weights/yolov11m-pose.onnx",
+            "confidence_threshold": 0.6,
+            "nms_threshold": 0.5,
+            "build_engine": false
+        },
+        "face_feature": {
+            "model_path": "weights/resnet50.onnx",
+            "confidence_threshold": 0.7,
+            "build_engine": false
+        }
+    }
+}
