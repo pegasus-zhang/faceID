@@ -177,7 +177,6 @@ void FaceDetectThread::run()
                             ROS_INFO("Detected face: %s, Confidence: %.2f, 3d pos(camera): (%f, %f, %f)", face.name.c_str(), face.confidence, output.foot_point_camera[k].x, output.foot_point_camera[k].y, output.foot_point_camera[k].z);
                             ROS_INFO("Detected face: %s, Confidence: %.2f, 3d pos(robot): (%f, %f, %f)", face.name.c_str(), face.confidence, output.foot_point_robot[k].x, output.foot_point_robot[k].y, output.foot_point_robot[k].z);
                             ROS_INFO("Detected face: %s, Confidence: %.2f, 3d pos(world): (%f, %f, %f)", face.name.c_str(), face.confidence, output.foot_point_world[k].x, output.foot_point_world[k].y, output.foot_point_world[k].z);
-                            std::cout<<std::endl;
                         }                          
                     }
                   
@@ -278,6 +277,13 @@ void FaceDetectThread::run()
         if(print_flag_)
         {
             ROS_INFO("Used time: %.4f, Mean time: %.4f", used_time, used_times_mean);
+            ROS_INFO("face_lists.size: %d", face_lists.face.size());
+            if(face_lists.face.size() > 0)
+            {
+                ROS_INFO("face_lists.face[0].name: %s", face_lists.face[0].name.c_str());
+                ROS_INFO("face_lists.face[0].id: %d", face_lists.face[0].id);
+            }
+            std::cout<<std::endl;
         }
         rate.sleep(); // 等待直到下一个周期
     }

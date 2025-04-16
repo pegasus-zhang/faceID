@@ -24,8 +24,11 @@ bool MyThread::is_stopped() const {
 }
 
 void MyThread::suspend() {
-    suspend_flag_.store(true);
-    std::cout << "Thread suspended." << std::endl;
+    if(!is_suspended())
+    {
+        suspend_flag_.store(true);
+        std::cout << "Thread suspended." << std::endl;
+    }
 }
 
 bool MyThread::is_suspended() const {

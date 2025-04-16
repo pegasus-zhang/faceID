@@ -10,6 +10,7 @@ int CmdListener::Init(ros::NodeHandle& nh, const nlohmann::json& args)
     face_record_thread_flag_= false;
     sub_perc_cmd_ = nh.subscribe("/planning/perc_cmd", 10, &CmdListener::cmdCallback, this);
     // sub_eye_cmd_ = nh.subscribe("/planning/eye_cmd", 10, &CmdListener::cmdFaceRecordCallback, this);
+    sub_perc_state_ = nh.subscribe("/planning/perc_state", 10, &CmdListener::percStateCallback, this);
     int ret = face_detect_thread_.Init(args);
     return ret;
 }
@@ -25,6 +26,7 @@ void CmdListener::start() {
 
 void CmdListener::cmdCallback(const perception_msgs::PercCmd::ConstPtr& msg) {
     if (msg->perc_kind == msg->PERC_FOLLOW || msg->perc_kind == msg->PERC_WELCOME_DEMO || msg->perc_kind == msg->PERC_LOBBY_DEMO) {
+        action_id_ = msg->action_id;
         std::string host_name = GetChineseName(msg->follow_name);
         ROS_INFO("Receieve host_name: %s", host_name.c_str());
         std::vector<std::string> name_list;
@@ -54,3 +56,11 @@ void CmdListener::cmdCallback(const perception_msgs::PercCmd::ConstPtr& msg) {
 //     // 实现内容
 // }
 
+void CmdListener::percStateCallback(const perception_msgs::PercState::ConstPtr& msg)
+{
+    if (action_id_ == msg->action_id &&
+     msg->exe_state == msg->ACTION_DONE) 
+    {
+        face_detect_thread_.suspend();
+    } 
+}
