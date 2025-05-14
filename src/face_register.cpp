@@ -84,3 +84,57 @@ int FaceRegister::Load(std::string database_path)
     face_database_ = j;
     return 0;
 }
+
+int FaceRegister::AddFace(const std::string& face_name,const cv::cuda::GpuMat& face_feature,bool update)
+{
+    if(face_feature.empty())
+    {
+        return -1;
+    }
+    // 将人脸特征添加到数据库中
+    cv::Mat cpu_face_feature;
+    face_feature.download(cpu_face_feature);
+    nlohmann::json j;
+    for (int i = 0; i < cpu_face_feature.rows; i++)
+    {
+        std::vector<float> value_vector;
+        for (int j = 0; j < cpu_face_feature.cols; j++)
+        {
+            value_vector.push_back(cpu_face_feature.at<float>(i, j));
+        }
+        j.push_back(value_vector);
+    }
+    // 将 JSON 对象添加到数据库中
+    face_database_[face_name] = j;
+    if(update)
+    {
+        Update();
+    }
+    return 0; // 返回值
+}
+int FaceRegister::DeleteFace(const std::string& face_name,bool update)
+{
+    // 从数据库中删除人脸
+    face_database_.erase(face_name);
+    if(update)
+    {
+        Update();
+    }
+    return 0; // 返回值
+}
+
+int FaceRegister::SaveDatabase(const std::string& database_path)
+{
+    // 将数据库保存为 JSON 文件
+    std::ofstream file(database_path);
+    if (!file.is_open()) 
+    {
+        std::cerr << "无法打开文件: " << database_path << std::endl;
+        return -1;
+    }
+
+    file << face_database_.dump(4); // 格式化输出 JSON
+    file.close();
+    return 0;
+}
+
